@@ -1,29 +1,29 @@
 package jsonpointer
 
 import (
-	"net/url"
 	"strconv"
 	"strings"
 )
 
+func unescape(s string) string {
+	if strings.Contains(s, "~") {
+		s = strings.Replace(s, "~1", "/", -1)
+		s = strings.Replace(s, "~0", "~", -1)
+	}
+	return s
+}
+
 // Get the value at the specified path.
 func Get(m map[string]interface{}, path string) interface{} {
-	if path == "/" {
+	if path == "" {
 		return m
 	}
 
-	parts := strings.Split(path, "/")
+	parts := strings.Split(path[1:], "/")
 	var rv interface{} = m
-	var err error
 
 	for _, p := range parts {
-		if p == "" {
-			continue
-		}
-		p, err = url.QueryUnescape(p)
-		if err != nil {
-			return nil
-		}
+		p = unescape(p)
 		switch v := rv.(type) {
 		case map[string]interface{}:
 			rv = v[p]

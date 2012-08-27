@@ -7,14 +7,18 @@ import (
 )
 
 const objSrc = `{
-  "a": 1,
-  "b": {
-    "c": 2
-  },
-  "d": {
-    "e": [{"a":3}, {"b":4}, {"c":5}]
-  },
-  "g/n/r": "has slash, will travel"
+      "foo": ["bar", "baz"],
+      "": 0,
+      "a/b": 1,
+      "c%d": 2,
+      "e^f": 3,
+      "g|h": 4,
+      "i\\j": 5,
+      "k\"l": 6,
+      " ": 7,
+      "m~n": 8,
+      "g/n/r": "has slash, will travel",
+      "g": { "n": {"r": "where's tito?"}}
 }`
 
 var obj = map[string]interface{}{}
@@ -23,15 +27,20 @@ var tests = []struct {
 	path string
 	exp  interface{}
 }{
-	{"/", obj},
-	{"/a", 1.0},
-	{"/b/c", 2.0},
-	{"/d/e/0/a", 3.0},
-	{"/d/e/1/b", 4.0},
-	{"/d/e/2/c", 5.0},
-	{"/x", nil},
-	{"/a/c/x", nil},
-	{"/g%2fn%2Fr", "has slash, will travel"},
+	{"", obj},
+	{"/foo", []interface{}{"bar", "baz"}},
+	{"/foo/0", "bar"},
+	{"/", 0.0},
+	{"/a~1b", 1.0},
+	{"/c%d", 2.0},
+	{"/e^f", 3.0},
+	{"/g|h", 4.0},
+	{"/i\\j", 5.0},
+	{"/k\"l", 6.0},
+	{"/ ", 7.0},
+	{"/m~0n", 8.0},
+	{"/g~1n~1r", "has slash, will travel"},
+	{"/g/n/r", "where's tito?"},
 }
 
 func init() {
