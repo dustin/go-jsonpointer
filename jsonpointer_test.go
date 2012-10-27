@@ -70,3 +70,16 @@ func BenchmarkPaths(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkParseAndPath(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for _, test := range tests {
+			o := map[string]interface{}{}
+			err := json.Unmarshal([]byte(objSrc), &o)
+			if err != nil {
+				b.Fatalf("Error parsing: %v", err)
+			}
+			Get(o, test.path)
+		}
+	}
+}
