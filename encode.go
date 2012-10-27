@@ -7,6 +7,7 @@
 //
 // See "JSON and Go" for an introduction to this package:
 // http://golang.org/doc/articles/json_and_go.html
+
 package jsonpointer
 
 import (

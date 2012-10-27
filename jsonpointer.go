@@ -1,7 +1,5 @@
-// JSON Pointer
-//
-// Path access to map[string]interface{} objects (typical of JSON
-// decoding).
+// JSON Pointer path access to either raw JSON bytes or a
+// map[string]interface{}
 package jsonpointer
 
 import (
