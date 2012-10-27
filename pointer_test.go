@@ -35,6 +35,34 @@ func TestPointerRoot(t *testing.T) {
 	}
 }
 
+func TestManyPointers(t *testing.T) {
+	pointers := []string{}
+	exp := map[string]interface{}{}
+	for _, test := range ptests {
+		pointers = append(pointers, test.path)
+		exp[test.path] = test.exp
+	}
+
+	rv, err := FindMany([]byte(objSrc), pointers)
+	if err != nil {
+		t.Fatalf("Error finding many: %v", err)
+	}
+
+	got := map[string]interface{}{}
+	for k, v := range rv {
+		var val interface{}
+		err = Unmarshal(v, &val)
+		if err != nil {
+			t.Fatalf("Error unmarshaling %s: %v", v, err)
+		}
+		got[k] = val
+	}
+
+	if !reflect.DeepEqual(got, exp) {
+		t.Fatalf("Expected\n%v\ngot\n%v", exp, got)
+	}
+}
+
 func TestPointer(t *testing.T) {
 
 	for _, test := range ptests {
@@ -62,5 +90,18 @@ func BenchmarkPointer(b *testing.B) {
 		for _, test := range tests {
 			Find(obj, test.path)
 		}
+	}
+}
+
+func BenchmarkManyPointer(b *testing.B) {
+	pointers := []string{}
+	for _, test := range ptests {
+		pointers = append(pointers, test.path)
+	}
+	obj := []byte(objSrc)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		FindMany(obj, pointers)
 	}
 }

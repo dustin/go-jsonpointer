@@ -94,3 +94,16 @@ func Find(data []byte, path string) ([]byte, error) {
 
 	return nil, unparsable
 }
+
+// Find a section of raw JSON by specifying a JSONPointer.
+func FindMany(data []byte, paths []string) (map[string][]byte, error) {
+	rv := map[string][]byte{}
+	for _, p := range paths {
+		d, err := Find(data, p)
+		if err != nil {
+			return rv, err
+		}
+		rv[p] = d
+	}
+	return rv, nil
+}
