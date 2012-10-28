@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+
+	"github.com/dustin/gojson"
 )
 
 var unparsable = errors.New("I can't parse this")
@@ -44,7 +46,7 @@ func encodePointer(p []string) string {
 }
 
 func grokLiteral(b []byte) string {
-	s, ok := unquoteBytes(b)
+	s, ok := json.UnquoteBytes(b)
 	if !ok {
 		panic("could not grok literal " + string(b))
 	}
@@ -54,13 +56,13 @@ func grokLiteral(b []byte) string {
 // Find a section of raw JSON by specifying a JSONPointer.
 func Find(data []byte, path string) ([]byte, error) {
 	if path == "" {
-		return RawMessage(data), nil
+		return data, nil
 	}
 
 	needle := parsePointer(path)
 
-	scanner := &scanner{}
-	scanner.reset()
+	scanner := &json.Scanner{}
+	scanner.Reset()
 
 	offset := 0
 	beganLiteral := 0
@@ -68,37 +70,37 @@ func Find(data []byte, path string) ([]byte, error) {
 	for {
 		var newOp int
 		if offset >= len(data) {
-			newOp = scanner.eof()
+			newOp = scanner.EOF()
 			break
 			offset = len(data) + 1 // mark processed EOF with len+1
 		} else {
 			c := int(data[offset])
 			offset++
-			newOp = scanner.step(scanner, c)
+			newOp = scanner.Step(scanner, c)
 		}
 
 		switch newOp {
-		case scanBeginArray:
+		case json.ScanBeginArray:
 			current = append(current, "0")
-		case scanObjectKey:
+		case json.ScanObjectKey:
 			current = append(current, grokLiteral(data[beganLiteral-1:offset-1]))
-		case scanBeginLiteral:
+		case json.ScanBeginLiteral:
 			beganLiteral = offset
-		case scanArrayValue:
+		case json.ScanArrayValue:
 			n, err := strconv.Atoi(current[len(current)-1])
 			if err != nil {
 				return nil, err
 			}
 			current[len(current)-1] = strconv.Itoa(n + 1)
-		case scanObjectValue:
+		case json.ScanObjectValue:
 			current = current[:len(current)-1]
-		case scanEndArray:
+		case json.ScanEndArray:
 			current = current[:len(current)-1]
 		}
 
-		if (newOp == scanBeginArray || newOp == scanArrayValue ||
-			newOp == scanObjectKey) && arreq(needle, current) {
-			val, _, err := nextValue(data[offset:], scanner)
+		if (newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
+			newOp == json.ScanObjectKey) && arreq(needle, current) {
+			val, _, err := json.NextValue(data[offset:], scanner)
 			return val, err
 		}
 	}
@@ -118,8 +120,8 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 		}
 	}
 
-	scan := &scanner{}
-	scan.reset()
+	scan := &json.Scanner{}
+	scan.Reset()
 
 	offset := 0
 	beganLiteral := 0
@@ -128,41 +130,41 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 	for {
 		var newOp int
 		if offset >= len(data) {
-			newOp = scan.eof()
+			newOp = scan.EOF()
 			break
 			offset = len(data) + 1 // mark processed EOF with len+1
 		} else {
 			c := int(data[offset])
 			offset++
-			newOp = scan.step(scan, c)
+			newOp = scan.Step(scan, c)
 		}
 
 		switch newOp {
-		case scanBeginArray:
+		case json.ScanBeginArray:
 			current = append(current, "0")
 			currentStr = encodePointer(current)
-		case scanObjectKey:
+		case json.ScanObjectKey:
 			current = append(current, grokLiteral(data[beganLiteral-1:offset-1]))
 			currentStr = encodePointer(current)
-		case scanBeginLiteral:
+		case json.ScanBeginLiteral:
 			beganLiteral = offset
-		case scanArrayValue:
+		case json.ScanArrayValue:
 			n, err := strconv.Atoi(current[len(current)-1])
 			if err != nil {
 				return nil, err
 			}
 			current[len(current)-1] = strconv.Itoa(n + 1)
 			currentStr = encodePointer(current)
-		case scanObjectValue, scanEndArray:
+		case json.ScanObjectValue, json.ScanEndArray:
 			current = current[:len(current)-1]
 			currentStr = encodePointer(current)
 		}
 
-		if (newOp == scanBeginArray || newOp == scanArrayValue ||
-			newOp == scanObjectKey) && todo[currentStr] {
+		if (newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
+			newOp == json.ScanObjectKey) && todo[currentStr] {
 
-			stmp := &scanner{}
-			val, _, err := nextValue(data[offset:], stmp)
+			stmp := &json.Scanner{}
+			val, _, err := json.NextValue(data[offset:], stmp)
 			if err != nil {
 				return m, err
 			}

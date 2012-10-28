@@ -1,8 +1,13 @@
 package jsonpointer
 
 import (
+	"compress/gzip"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
+
+	"github.com/dustin/gojson"
 )
 
 var ptests = []struct {
@@ -51,7 +56,7 @@ func TestManyPointers(t *testing.T) {
 	got := map[string]interface{}{}
 	for k, v := range rv {
 		var val interface{}
-		err = Unmarshal(v, &val)
+		err = json.Unmarshal(v, &val)
 		if err != nil {
 			t.Fatalf("Error unmarshaling %s: %v", v, err)
 		}
@@ -74,7 +79,7 @@ func TestPointer(t *testing.T) {
 		got, err := Find([]byte(objSrc), test.path)
 		var val interface{}
 		if err == nil {
-			err = Unmarshal([]byte(got), &val)
+			err = json.Unmarshal([]byte(got), &val)
 		}
 		if err != nil {
 			t.Errorf("Got an error on key %v: %v", test.path, err)
@@ -139,6 +144,26 @@ func BenchmarkManyPointer(b *testing.B) {
 	}
 }
 
+var codeJSON []byte
+
+func codeInit() {
+	f, err := os.Open("testdata/code.json.gz")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		panic(err)
+	}
+	data, err := ioutil.ReadAll(gz)
+	if err != nil {
+		panic(err)
+	}
+
+	codeJSON = data
+}
+
 func BenchmarkPointerLarge(b *testing.B) {
 	keys := []string{
 		"/tree/kids/0/kids/0/name",
@@ -194,7 +219,7 @@ func BenchmarkPointerSlow(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		m := map[string]interface{}{}
-		err := Unmarshal(codeJSON, &m)
+		err := json.Unmarshal(codeJSON, &m)
 		if err != nil {
 			b.Fatalf("Error parsing JSON: %v", err)
 		}
