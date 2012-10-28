@@ -96,7 +96,8 @@ func Find(data []byte, path string) ([]byte, error) {
 			current = current[:len(current)-1]
 		}
 
-		if arreq(needle, current) {
+		if (newOp == scanBeginArray || newOp == scanArrayValue ||
+			newOp == scanObjectKey) && arreq(needle, current) {
 			val, _, err := nextValue(data[offset:], scanner)
 			return val, err
 		}
