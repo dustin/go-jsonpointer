@@ -22,7 +22,7 @@ func arreq(a, b []string) bool {
 }
 
 func parsePointer(s string) []string {
-	a := strings.Split(s, "/")
+	a := strings.Split(s[1:], "/")
 
 	for i := range a {
 		if strings.Contains(a[i], "~") {
@@ -31,6 +31,16 @@ func parsePointer(s string) []string {
 		}
 	}
 	return a
+}
+
+func encodePointer(p []string) string {
+	a := make([]string, 0, len(p))
+	for _, s := range p {
+		s = strings.Replace(s, "~", "~0", -1)
+		s = strings.Replace(s, "/", "~1", -1)
+		a = append(a, s)
+	}
+	return "/" + strings.Join(a, "/")
 }
 
 func grokLiteral(b []byte) string {
@@ -47,7 +57,7 @@ func Find(data []byte, path string) ([]byte, error) {
 		return RawMessage(data), nil
 	}
 
-	needle := parsePointer(path[1:])
+	needle := parsePointer(path)
 
 	scanner := &scanner{}
 	scanner.reset()
@@ -97,13 +107,71 @@ func Find(data []byte, path string) ([]byte, error) {
 
 // Find a section of raw JSON by specifying a JSONPointer.
 func FindMany(data []byte, paths []string) (map[string][]byte, error) {
-	rv := map[string][]byte{}
+	todo := map[string]bool{}
+	m := map[string][]byte{}
 	for _, p := range paths {
-		d, err := Find(data, p)
-		if err != nil {
-			return rv, err
+		if p == "" {
+			m[p] = data
+		} else {
+			todo[p] = true
 		}
-		rv[p] = d
 	}
-	return rv, nil
+
+	scan := &scanner{}
+	scan.reset()
+
+	offset := 0
+	beganLiteral := 0
+	var current []string
+	currentStr := ""
+	for {
+		var newOp int
+		if offset >= len(data) {
+			newOp = scan.eof()
+			break
+			offset = len(data) + 1 // mark processed EOF with len+1
+		} else {
+			c := int(data[offset])
+			offset++
+			newOp = scan.step(scan, c)
+		}
+
+		switch newOp {
+		case scanBeginArray:
+			current = append(current, "0")
+			currentStr = encodePointer(current)
+		case scanObjectKey:
+			current = append(current, grokLiteral(data[beganLiteral-1:offset-1]))
+			currentStr = encodePointer(current)
+		case scanBeginLiteral:
+			beganLiteral = offset
+		case scanArrayValue:
+			n, err := strconv.Atoi(current[len(current)-1])
+			if err != nil {
+				return nil, err
+			}
+			current[len(current)-1] = strconv.Itoa(n + 1)
+			currentStr = encodePointer(current)
+		case scanObjectValue, scanEndArray:
+			current = current[:len(current)-1]
+			currentStr = encodePointer(current)
+		}
+
+		if (newOp == scanBeginArray || newOp == scanArrayValue ||
+			newOp == scanObjectKey) && todo[currentStr] {
+
+			stmp := &scanner{}
+			val, _, err := nextValue(data[offset:], stmp)
+			if err != nil {
+				return m, err
+			}
+			m[currentStr] = val
+			delete(todo, currentStr)
+			if len(todo) == 0 {
+				return m, nil
+			}
+		}
+	}
+
+	return m, nil
 }

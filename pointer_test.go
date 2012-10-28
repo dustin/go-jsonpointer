@@ -59,7 +59,12 @@ func TestManyPointers(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(got, exp) {
-		t.Fatalf("Expected\n%v\ngot\n%v", exp, got)
+		for k, v := range exp {
+			if !reflect.DeepEqual(got[k], v) {
+				t.Errorf("At %v, expected %#v, got %#v", k, v, got[k])
+			}
+		}
+		t.Fail()
 	}
 }
 
@@ -80,6 +85,34 @@ func TestPointer(t *testing.T) {
 			t.Fail()
 		} else {
 			t.Logf("Success - got %s for %#v", got, test.path)
+		}
+	}
+}
+
+func TestPointerCoder(t *testing.T) {
+	tests := map[string][]string{
+		"/":        []string{""},
+		"/a":       []string{"a"},
+		"/a~1b":    []string{"a/b"},
+		"/m~0n":    []string{"m~n"},
+		"/ ":       []string{" "},
+		"/g~1n~1r": []string{"g/n/r"},
+		"/g/n/r":   []string{"g", "n", "r"},
+	}
+
+	for k, v := range tests {
+		parsed := parsePointer(k)
+		encoded := encodePointer(v)
+
+		if k != encoded {
+			t.Errorf("Expected to encode %#v as %#v, got %#v",
+				v, k, encoded)
+			t.Fail()
+		}
+		if !arreq(v, parsed) {
+			t.Errorf("Expected to decode %#v as %#v, got %#v",
+				k, v, parsed)
+			t.Fail()
 		}
 	}
 }
