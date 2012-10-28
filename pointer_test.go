@@ -138,3 +138,66 @@ func BenchmarkManyPointer(b *testing.B) {
 		FindMany(obj, pointers)
 	}
 }
+
+func BenchmarkPointerLarge(b *testing.B) {
+	keys := []string{
+		"/tree/kids/0/kids/0/name",
+		"/tree/kids/0/name",
+		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
+	}
+	if codeJSON == nil {
+		b.StopTimer()
+		codeInit()
+		b.StartTimer()
+	}
+	b.SetBytes(int64(len(codeJSON)))
+
+	for i := 0; i < b.N; i++ {
+		found, err := FindMany(codeJSON, keys)
+		if err != nil || len(found) != 3 {
+			b.Fatalf("Didn't find all the things from %v/%v",
+				found, err)
+		}
+	}
+}
+
+func BenchmarkPointerLargeShallow(b *testing.B) {
+	keys := []string{
+		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
+	}
+	if codeJSON == nil {
+		b.StopTimer()
+		codeInit()
+		b.StartTimer()
+	}
+	b.SetBytes(int64(len(codeJSON)))
+
+	for i := 0; i < b.N; i++ {
+		found, err := FindMany(codeJSON, keys)
+		if err != nil || len(found) != 1 {
+			b.Fatalf("Didn't find all the things: %v/%v",
+				found, err)
+		}
+	}
+}
+
+func BenchmarkPointerSlow(b *testing.B) {
+	keys := []string{
+		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
+	}
+	if codeJSON == nil {
+		b.StopTimer()
+		codeInit()
+		b.StartTimer()
+	}
+	b.SetBytes(int64(len(codeJSON)))
+
+	for i := 0; i < b.N; i++ {
+		m := map[string]interface{}{}
+		err := Unmarshal(codeJSON, &m)
+		if err != nil {
+			b.Fatalf("Error parsing JSON: %v", err)
+		}
+		Get(m, keys[0])
+	}
+}
