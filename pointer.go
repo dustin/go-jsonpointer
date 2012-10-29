@@ -37,14 +37,27 @@ func parsePointer(s string) []string {
 	return a
 }
 
-var encoder = strings.NewReplacer("/", "~1", "~", "~0")
-
 func encodePointer(p []string) string {
-	a := make([]string, 0, len(p))
+	totalLen := 1
 	for _, s := range p {
-		a = append(a, encoder.Replace(s))
+		totalLen += len(s) + 1
 	}
-	return "/" + strings.Join(a, "/")
+	out := make([]rune, 0, totalLen)
+
+	for _, s := range p {
+		out = append(out, '/')
+		for _, c := range s {
+			switch c {
+			case '/':
+				out = append(out, '~', '1')
+			case '~':
+				out = append(out, '~', '0')
+			default:
+				out = append(out, c)
+			}
+		}
+	}
+	return string(out)
 }
 
 func grokLiteral(b []byte) string {
