@@ -145,6 +145,13 @@ func TestPointerCoder(t *testing.T) {
 	}
 }
 
+func BenchmarkEncodePointer(b *testing.B) {
+	aPath := []string{"a", "ab", "a~0b", "a~1b", "a~0~1~0~1b"}
+	for i := 0; i < b.N; i++ {
+		encodePointer(aPath)
+	}
+}
+
 func BenchmarkPointer(b *testing.B) {
 	obj := []byte(objSrc)
 	for i := 0; i < b.N; i++ {

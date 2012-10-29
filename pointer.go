@@ -24,24 +24,25 @@ func arreq(a, b []string) bool {
 	return false
 }
 
+var decoder = strings.NewReplacer("~1", "/", "~0", "~")
+
 func parsePointer(s string) []string {
 	a := strings.Split(s[1:], "/")
 
 	for i := range a {
 		if strings.Contains(a[i], "~") {
-			a[i] = strings.Replace(a[i], "~1", "/", -1)
-			a[i] = strings.Replace(a[i], "~0", "~", -1)
+			a[i] = decoder.Replace(a[i])
 		}
 	}
 	return a
 }
 
+var encoder = strings.NewReplacer("/", "~1", "~", "~0")
+
 func encodePointer(p []string) string {
 	a := make([]string, 0, len(p))
 	for _, s := range p {
-		s = strings.Replace(s, "~", "~0", -1)
-		s = strings.Replace(s, "/", "~1", -1)
-		a = append(a, s)
+		a = append(a, encoder.Replace(s))
 	}
 	return "/" + strings.Join(a, "/")
 }
