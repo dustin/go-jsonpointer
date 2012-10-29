@@ -38,11 +38,7 @@ func parsePointer(s string) []string {
 }
 
 func encodePointer(p []string) string {
-	totalLen := 1
-	for _, s := range p {
-		totalLen += len(s) + 1
-	}
-	out := make([]rune, 0, totalLen)
+	out := make([]rune, 0, 64)
 
 	for _, s := range p {
 		out = append(out, '/')
