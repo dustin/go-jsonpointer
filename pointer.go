@@ -2,6 +2,7 @@ package jsonpointer
 
 import (
 	"errors"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -110,21 +111,24 @@ func Find(data []byte, path string) ([]byte, error) {
 
 // Find a section of raw JSON by specifying a JSONPointer.
 func FindMany(data []byte, paths []string) (map[string][]byte, error) {
-	todo := map[string]bool{}
+	tpaths := make([]string, 0, len(paths))
 	m := map[string][]byte{}
 	for _, p := range paths {
 		if p == "" {
 			m[p] = data
 		} else {
-			todo[p] = true
+			tpaths = append(tpaths, p)
 		}
 	}
+	sort.Strings(tpaths)
 
 	scan := &json.Scanner{}
 	scan.Reset()
 
 	offset := 0
+	todo := len(tpaths)
 	beganLiteral := 0
+	matchedAt := 0
 	var current []string
 	for {
 		var newOp int
@@ -157,19 +161,41 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 
 		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
 			newOp == json.ScanObjectKey {
+
+			if matchedAt < len(current)-1 {
+				continue
+			}
+			if matchedAt > len(current) {
+				matchedAt = len(current)
+			}
+
 			currentStr := encodePointer(current)
-			if !todo[currentStr] {
+			off := sort.SearchStrings(tpaths, currentStr)
+			if off < len(tpaths) {
+				// Check to see if the path we're
+				// going down could even lead to a
+				// possible match.
+				if strings.HasPrefix(tpaths[off], currentStr) {
+					matchedAt++
+				}
+				// And if it's not an exact match, keep parsing.
+				if tpaths[off] != currentStr {
+					continue
+				}
+			} else {
+				// Fell of the end of the list, no possible match
 				continue
 			}
 
+			// At this point, we have an exact match, so grab it.
 			stmp := &json.Scanner{}
 			val, _, err := json.NextValue(data[offset:], stmp)
 			if err != nil {
 				return m, err
 			}
 			m[currentStr] = val
-			delete(todo, currentStr)
-			if len(todo) == 0 {
+			todo--
+			if todo == 0 {
 				return m, nil
 			}
 		}
