@@ -72,23 +72,18 @@ func Find(data []byte, path string) ([]byte, error) {
 
 	needle := parsePointer(path)
 
-	scanner := &json.Scanner{}
-	scanner.Reset()
+	scan := &json.Scanner{}
+	scan.Reset()
 
 	offset := 0
 	beganLiteral := 0
 	current := []string{}
 	for {
-		var newOp int
 		if offset >= len(data) {
-			newOp = scanner.EOF()
 			break
-			offset = len(data) + 1 // mark processed EOF with len+1
-		} else {
-			c := int(data[offset])
-			offset++
-			newOp = scanner.Step(scanner, c)
 		}
+		newOp := scan.Step(scan, int(data[offset]))
+		offset++
 
 		switch newOp {
 		case json.ScanBeginArray:
@@ -111,7 +106,7 @@ func Find(data []byte, path string) ([]byte, error) {
 
 		if (newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
 			newOp == json.ScanObjectKey) && arreq(needle, current) {
-			val, _, err := json.NextValue(data[offset:], scanner)
+			val, _, err := json.NextValue(data[offset:], scan)
 			return val, err
 		}
 	}
@@ -130,15 +125,11 @@ func ListPointers(data []byte) ([]string, error) {
 	beganLiteral := 0
 	var current []string
 	for {
-		var newOp int
 		if offset >= len(data) {
-			newOp = scan.EOF()
 			break
-		} else {
-			c := int(data[offset])
-			offset++
-			newOp = scan.Step(scan, c)
 		}
+		newOp := scan.Step(scan, int(data[offset]))
+		offset++
 
 		switch newOp {
 		case json.ScanBeginArray:
@@ -188,16 +179,11 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 	matchedAt := 0
 	var current []string
 	for todo > 0 {
-		var newOp int
 		if offset >= len(data) {
-			newOp = scan.EOF()
 			break
-			offset = len(data) + 1 // mark processed EOF with len+1
-		} else {
-			c := int(data[offset])
-			offset++
-			newOp = scan.Step(scan, c)
 		}
+		newOp := scan.Step(scan, int(data[offset]))
+		offset++
 
 		switch newOp {
 		case json.ScanBeginArray:
