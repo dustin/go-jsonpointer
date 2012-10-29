@@ -144,7 +144,7 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 	beganLiteral := 0
 	matchedAt := 0
 	var current []string
-	for {
+	for todo > 0 {
 		var newOp int
 		if offset >= len(data) {
 			newOp = scan.EOF()
@@ -209,9 +209,6 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 			}
 			m[currentStr] = val
 			todo--
-			if todo == 0 {
-				return m, nil
-			}
 		}
 	}
 
