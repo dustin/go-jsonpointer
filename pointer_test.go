@@ -169,7 +169,7 @@ func BenchmarkManyPointer(b *testing.B) {
 
 var codeJSON []byte
 
-func codeInit() {
+func init() {
 	f, err := os.Open("testdata/code.json.gz")
 	if err != nil {
 		panic(err)
@@ -193,11 +193,6 @@ func BenchmarkPointerLarge(b *testing.B) {
 		"/tree/kids/0/name",
 		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
 	}
-	if codeJSON == nil {
-		b.StopTimer()
-		codeInit()
-		b.StartTimer()
-	}
 	b.SetBytes(int64(len(codeJSON)))
 
 	for i := 0; i < b.N; i++ {
@@ -213,11 +208,6 @@ func BenchmarkPointerLargeShallow(b *testing.B) {
 	keys := []string{
 		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
 	}
-	if codeJSON == nil {
-		b.StopTimer()
-		codeInit()
-		b.StartTimer()
-	}
 	b.SetBytes(int64(len(codeJSON)))
 
 	for i := 0; i < b.N; i++ {
@@ -229,14 +219,24 @@ func BenchmarkPointerLargeShallow(b *testing.B) {
 	}
 }
 
+func BenchmarkPointerLargeMissing(b *testing.B) {
+	keys := []string{
+		"/this/does/not/exist",
+	}
+	b.SetBytes(int64(len(codeJSON)))
+
+	for i := 0; i < b.N; i++ {
+		found, err := FindMany(codeJSON, keys)
+		if err != nil || len(found) != 0 {
+			b.Fatalf("Didn't find all the things: %v/%v",
+				found, err)
+		}
+	}
+}
+
 func BenchmarkPointerSlow(b *testing.B) {
 	keys := []string{
 		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
-	}
-	if codeJSON == nil {
-		b.StopTimer()
-		codeInit()
-		b.StartTimer()
 	}
 	b.SetBytes(int64(len(codeJSON)))
 
