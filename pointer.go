@@ -126,7 +126,6 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 	offset := 0
 	beganLiteral := 0
 	var current []string
-	currentStr := ""
 	for {
 		var newOp int
 		if offset >= len(data) {
@@ -142,10 +141,8 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 		switch newOp {
 		case json.ScanBeginArray:
 			current = append(current, "0")
-			currentStr = encodePointer(current)
 		case json.ScanObjectKey:
 			current = append(current, grokLiteral(data[beganLiteral-1:offset-1]))
-			currentStr = encodePointer(current)
 		case json.ScanBeginLiteral:
 			beganLiteral = offset
 		case json.ScanArrayValue:
@@ -154,14 +151,16 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 				return nil, err
 			}
 			current[len(current)-1] = strconv.Itoa(n + 1)
-			currentStr = encodePointer(current)
 		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
 			current = current[:len(current)-1]
-			currentStr = encodePointer(current)
 		}
 
-		if (newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
-			newOp == json.ScanObjectKey) && todo[currentStr] {
+		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
+			newOp == json.ScanObjectKey {
+			currentStr := encodePointer(current)
+			if !todo[currentStr] {
+				continue
+			}
 
 			stmp := &json.Scanner{}
 			val, _, err := json.NextValue(data[offset:], stmp)
