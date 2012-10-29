@@ -40,6 +40,17 @@ func TestPointerRoot(t *testing.T) {
 	}
 }
 
+func TestPointerMissing(t *testing.T) {
+	got, err := Find([]byte(objSrc), "/missing")
+	if err != nil {
+		t.Fatalf("Error finding missing item: %v", err)
+	}
+	if got != nil {
+		t.Fatalf("Expected nil looking for /missing, got %v",
+			got)
+	}
+}
+
 func TestManyPointers(t *testing.T) {
 	pointers := []string{}
 	exp := map[string]interface{}{}
@@ -71,6 +82,18 @@ func TestManyPointers(t *testing.T) {
 		}
 		t.Fail()
 	}
+}
+
+func TestManyPointersMissing(t *testing.T) {
+	got, err := FindMany([]byte(objSrc), []string{"/missing"})
+	if err != nil {
+		t.Fatalf("Error finding missing item: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("Expected empty looking for many /missing, got %v",
+			got)
+	}
+
 }
 
 func TestPointer(t *testing.T) {

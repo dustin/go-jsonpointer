@@ -105,7 +105,7 @@ func Find(data []byte, path string) ([]byte, error) {
 		}
 	}
 
-	return nil, unparsable
+	return nil, nil
 }
 
 // Find a section of raw JSON by specifying a JSONPointer.
@@ -155,7 +155,7 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 			}
 			current[len(current)-1] = strconv.Itoa(n + 1)
 			currentStr = encodePointer(current)
-		case json.ScanObjectValue, json.ScanEndArray:
+		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
 			current = current[:len(current)-1]
 			currentStr = encodePointer(current)
 		}
