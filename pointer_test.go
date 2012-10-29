@@ -152,7 +152,7 @@ func BenchmarkEncodePointer(b *testing.B) {
 	}
 }
 
-func BenchmarkPointer(b *testing.B) {
+func BenchmarkAll(b *testing.B) {
 	obj := []byte(objSrc)
 	for i := 0; i < b.N; i++ {
 		for _, test := range tests {
@@ -194,7 +194,7 @@ func init() {
 	codeJSON = data
 }
 
-func BenchmarkPointerLarge(b *testing.B) {
+func BenchmarkLarge3Key(b *testing.B) {
 	keys := []string{
 		"/tree/kids/0/kids/0/name",
 		"/tree/kids/0/name",
@@ -211,9 +211,9 @@ func BenchmarkPointerLarge(b *testing.B) {
 	}
 }
 
-func BenchmarkPointerLargeShallow(b *testing.B) {
+func BenchmarkLargeShallow(b *testing.B) {
 	keys := []string{
-		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
+		"/tree/kids/0/kids/0/kids/1/kids/1/kids/3/name",
 	}
 	b.SetBytes(int64(len(codeJSON)))
 
@@ -226,7 +226,7 @@ func BenchmarkPointerLargeShallow(b *testing.B) {
 	}
 }
 
-func BenchmarkPointerLargeMissing(b *testing.B) {
+func BenchmarkLargeMissing(b *testing.B) {
 	keys := []string{
 		"/this/does/not/exist",
 	}
@@ -241,7 +241,37 @@ func BenchmarkPointerLargeMissing(b *testing.B) {
 	}
 }
 
-func BenchmarkPointerSlow(b *testing.B) {
+func BenchmarkLargeIdentity(b *testing.B) {
+	keys := []string{
+		"",
+	}
+	b.SetBytes(int64(len(codeJSON)))
+
+	for i := 0; i < b.N; i++ {
+		found, err := FindMany(codeJSON, keys)
+		if err != nil || len(found) != 1 {
+			b.Fatalf("Didn't find all the things: %v/%v",
+				found, err)
+		}
+	}
+}
+
+func BenchmarkLargeBest(b *testing.B) {
+	keys := []string{
+		"/tree/name",
+	}
+	b.SetBytes(int64(len(codeJSON)))
+
+	for i := 0; i < b.N; i++ {
+		found, err := FindMany(codeJSON, keys)
+		if err != nil || len(found) != 1 {
+			b.Fatalf("Didn't find all the things: %v/%v",
+				found, err)
+		}
+	}
+}
+
+func BenchmarkLargeMap(b *testing.B) {
 	keys := []string{
 		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
 	}
