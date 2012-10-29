@@ -119,6 +119,53 @@ func Find(data []byte, path string) ([]byte, error) {
 	return nil, nil
 }
 
+// List all possible pointers from the given input.
+func ListPointers(data []byte) ([]string, error) {
+	rv := []string{""}
+
+	scan := &json.Scanner{}
+	scan.Reset()
+
+	offset := 0
+	beganLiteral := 0
+	var current []string
+	for {
+		var newOp int
+		if offset >= len(data) {
+			newOp = scan.EOF()
+			break
+		} else {
+			c := int(data[offset])
+			offset++
+			newOp = scan.Step(scan, c)
+		}
+
+		switch newOp {
+		case json.ScanBeginArray:
+			current = append(current, "0")
+		case json.ScanObjectKey:
+			current = append(current, grokLiteral(data[beganLiteral-1:offset-1]))
+		case json.ScanBeginLiteral:
+			beganLiteral = offset
+		case json.ScanArrayValue:
+			n, err := strconv.Atoi(current[len(current)-1])
+			if err != nil {
+				return nil, err
+			}
+			current[len(current)-1] = strconv.Itoa(n + 1)
+		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
+			current = current[:len(current)-1]
+		}
+
+		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
+			newOp == json.ScanObjectKey {
+			rv = append(rv, encodePointer(current))
+		}
+	}
+
+	return rv, nil
+}
+
 // Find a section of raw JSON by specifying a JSONPointer.
 func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 	tpaths := make([]string, 0, len(paths))

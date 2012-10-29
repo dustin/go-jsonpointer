@@ -29,6 +29,22 @@ var ptests = []struct {
 	{"/g/n/r", "where's tito?"},
 }
 
+func TestListPointers(t *testing.T) {
+	got, err := ListPointers([]byte(objSrc))
+	if err != nil {
+		t.Fatalf("Error getting list of pointers: %v", err)
+	}
+
+	exp := []string{"", "/foo", "/foo/0", "/foo/1", "/", "/a~1b",
+		"/c%d", "/e^f", "/g|h", "/i\\j", "/k\"l", "/ ", "/m~0n",
+		"/g~1n~1r", "/g", "/g/n", "/g/n/r",
+	}
+
+	if !reflect.DeepEqual(exp, got) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, got)
+	}
+}
+
 func TestPointerRoot(t *testing.T) {
 	got, err := Find([]byte(objSrc), "")
 	if err != nil {
