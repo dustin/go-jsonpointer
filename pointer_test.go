@@ -161,6 +161,22 @@ func TestPointerCoder(t *testing.T) {
 	}
 }
 
+func TestCBugg406(t *testing.T) {
+	data, err := ioutil.ReadFile("testdata/pools.json")
+	if err != nil {
+		t.Fatalf("Error reading pools data: %v", err)
+	}
+
+	found, err := Find(data, "/implementationVersion")
+	if err != nil {
+		t.Fatalf("Failed to find thing: %v", err)
+	}
+	exp := ` "2.0.0-1976-rel-enterprise"`
+	if string(found) != exp {
+		t.Fatalf("Expected %q, got %q", exp, found)
+	}
+}
+
 func BenchmarkEncodePointer(b *testing.B) {
 	aPath := []string{"a", "ab", "a~0b", "a~1b", "a~0~1~0~1b"}
 	for i := 0; i < b.N; i++ {

@@ -2,6 +2,7 @@ package jsonpointer
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -102,6 +103,14 @@ func Find(data []byte, path string) ([]byte, error) {
 			current = current[:len(current)-1]
 		case json.ScanEndArray:
 			current = current[:len(current)-1]
+		case json.ScanContinue:
+		case json.ScanSkipSpace:
+		case json.ScanBeginObject:
+		case json.ScanEndObject:
+			current = current[:len(current)-1]
+		case json.ScanEnd:
+		default:
+			return nil, fmt.Errorf("Found unhandled json op: %v", newOp)
 		}
 
 		if (newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
