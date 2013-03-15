@@ -1,9 +1,10 @@
 package jsonpointer
 
 import (
-	"encoding/json"
 	"reflect"
 	"testing"
+
+	"github.com/dustin/gojson"
 )
 
 const objSrc = `{
@@ -81,5 +82,31 @@ func BenchmarkParseAndPath(b *testing.B) {
 			}
 			Get(o, test.path)
 		}
+	}
+}
+
+var bug3Data = []byte(`{"foo" : "bar"}`)
+
+func TestFindSpaceBeforeColon(t *testing.T) {
+	val, err := Find(bug3Data, "/foo")
+	if err != nil {
+		t.Fatalf("Failed to find /foo: %v", err)
+	}
+	x, ok := json.UnquoteBytes(val)
+	if !ok {
+		t.Fatalf("Failed to unquote json bytes from %q", val)
+	}
+	if string(x) != "bar" {
+		t.Fatalf("Expected %q, got %q", "bar", val)
+	}
+}
+
+func TestListSpaceBeforeColon(t *testing.T) {
+	ptrs, err := ListPointers(bug3Data)
+	if err != nil {
+		t.Fatalf("Error listing pointers: %v", err)
+	}
+	if len(ptrs) != 2 || ptrs[0] != "" || ptrs[1] != "/foo" {
+		t.Fatalf(`Expected ["", "/foo"], got %#v`, ptrs)
 	}
 }
