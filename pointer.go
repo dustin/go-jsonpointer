@@ -65,6 +65,10 @@ func grokLiteral(b []byte) string {
 	return string(s)
 }
 
+func isSpace(c rune) bool {
+	return c == ' ' || c == '\t' || c == '\r' || c == '\n'
+}
+
 // Find a section of raw JSON by specifying a JSONPointer.
 func Find(data []byte, path string) ([]byte, error) {
 	if path == "" {
@@ -115,6 +119,15 @@ func Find(data []byte, path string) ([]byte, error) {
 
 		if (newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
 			newOp == json.ScanObjectKey) && arreq(needle, current) {
+			otmp := offset
+			for isSpace(rune(data[otmp])) {
+				otmp++
+			}
+			if data[otmp] == ']' {
+				// special case an array offset miss
+				offset = otmp
+				return nil, nil
+			}
 			val, _, err := json.NextValue(data[offset:], scan)
 			return val, err
 		}

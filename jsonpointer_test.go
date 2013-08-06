@@ -1,6 +1,7 @@
 package jsonpointer
 
 import (
+	"io/ioutil"
 	"reflect"
 	"testing"
 
@@ -108,5 +109,34 @@ func TestListSpaceBeforeColon(t *testing.T) {
 	}
 	if len(ptrs) != 2 || ptrs[0] != "" || ptrs[1] != "/foo" {
 		t.Fatalf(`Expected ["", "/foo"], got %#v`, ptrs)
+	}
+}
+
+func TestIndexNotFoundSameAsPropertyNotFound(t *testing.T) {
+	data, err := ioutil.ReadFile("testdata/357.json")
+	if err != nil {
+		t.Fatalf("Error beer-sample brewery 357 data: %v", err)
+	}
+
+	expectedResult, expectedError := Find(data, "/doesNotExist")
+
+	missingVals := []string{
+		"/address/0",
+		"/address/1",
+		"/address2/1",
+		"/address2/2",
+		"/address3/0",
+		"/address3/1",
+	}
+
+	for _, a := range missingVals {
+		found, err := Find(data, a)
+
+		if !reflect.DeepEqual(err, expectedError) {
+			t.Errorf("Expected %v at %v, got %v", expectedError, a, err)
+		}
+		if !reflect.DeepEqual(expectedResult, found) {
+			t.Errorf("Expected %v at %v, got %v", expectedResult, a, found)
+		}
 	}
 }
