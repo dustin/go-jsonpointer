@@ -140,3 +140,27 @@ func TestIndexNotFoundSameAsPropertyNotFound(t *testing.T) {
 		}
 	}
 }
+
+const bug822src = `{
+      "foo": ["bar", "baz"],
+      "": 0,
+      "a/b": 1,
+      "c%d": 2,
+      "e^f": 3,
+      "g|h": 4,
+      "i\\j": 5,
+      "k\"l": 6,
+      " ": 7,
+      "m~n": 8,
+      "g/n/r": "has slash, will travel",
+      "g": { "n": {"r": "where's tito?"}},
+      "h": {}
+}`
+
+func TestEmptyObjectPanic822(t *testing.T) {
+	ptrs, err := ListPointers([]byte(bug822src))
+	if err != nil {
+		t.Fatalf("Error parsing: %v", err)
+	}
+	t.Logf("Got pointers: %v", ptrs)
+}

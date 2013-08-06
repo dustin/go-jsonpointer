@@ -167,7 +167,10 @@ func ListPointers(data []byte) ([]string, error) {
 			}
 			current[len(current)-1] = strconv.Itoa(n + 1)
 		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
-			current = current[:len(current)-1]
+			end := len(current) - 1
+			if end >= 0 {
+				current = current[:end]
+			}
 		}
 
 		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
