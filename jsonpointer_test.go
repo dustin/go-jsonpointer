@@ -150,6 +150,7 @@ const bug822src = `{
       "g|h": 4,
       "i\\j": 5,
       "k\"l": 6,
+      "k2": {},
       " ": 7,
       "m~n": 8,
       "g/n/r": "has slash, will travel",
