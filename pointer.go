@@ -104,14 +104,14 @@ func Find(data []byte, path string) ([]byte, error) {
 			}
 			current[len(current)-1] = strconv.Itoa(n + 1)
 		case json.ScanObjectValue:
-			current = current[:len(current)-1]
+			current = sliceToEnd(current)
 		case json.ScanEndArray:
-			current = current[:len(current)-1]
+			current = sliceToEnd(current)
 		case json.ScanContinue:
 		case json.ScanSkipSpace:
 		case json.ScanBeginObject:
 		case json.ScanEndObject:
-			current = current[:len(current)-1]
+			current = sliceToEnd(current)
 		case json.ScanEnd:
 		default:
 			return nil, fmt.Errorf("Found unhandled json op: %v", newOp)
@@ -134,6 +134,15 @@ func Find(data []byte, path string) ([]byte, error) {
 	}
 
 	return nil, nil
+}
+
+func sliceToEnd(s []string) []string {
+	end := len(s) - 1
+	if end >= 0 {
+		s = s[:end]
+	}
+	return s
+
 }
 
 // List all possible pointers from the given input.
@@ -167,10 +176,7 @@ func ListPointers(data []byte) ([]string, error) {
 			}
 			current[len(current)-1] = strconv.Itoa(n + 1)
 		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
-			end := len(current) - 1
-			if end >= 0 {
-				current = current[:end]
-			}
+			current = sliceToEnd(current)
 		}
 
 		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||

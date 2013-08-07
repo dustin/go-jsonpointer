@@ -158,10 +158,19 @@ const bug822src = `{
       "h": {}
 }`
 
-func TestEmptyObjectPanic822(t *testing.T) {
+func TestListEmptyObjectPanic822(t *testing.T) {
 	ptrs, err := ListPointers([]byte(bug822src))
 	if err != nil {
 		t.Fatalf("Error parsing: %v", err)
 	}
 	t.Logf("Got pointers: %v", ptrs)
+}
+
+func TestFindEmptyObjectPanic823(t *testing.T) {
+	for _, test := range tests {
+		_, err := Find([]byte(bug822src), test.path)
+		if err != nil {
+			t.Errorf("Error looking for %v: %v", test.path, err)
+		}
+	}
 }
