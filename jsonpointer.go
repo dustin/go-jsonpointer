@@ -8,13 +8,12 @@ import (
 )
 
 // Get the value at the specified path.
-func Get(m map[string]interface{}, path string) interface{} {
+func Get(rv interface{}, path string) interface{} {
 	if path == "" {
-		return m
+		return rv
 	}
 
 	parts := strings.Split(path[1:], "/")
-	var rv interface{} = m
 
 	for _, p := range parts {
 		switch v := rv.(type) {

@@ -47,6 +47,7 @@ var tests = []struct {
 
 func init() {
 	err := json.Unmarshal([]byte(objSrc), &obj)
+
 	if err != nil {
 		panic(err)
 	}
@@ -171,6 +172,42 @@ func TestFindEmptyObjectPanic823(t *testing.T) {
 		_, err := Find([]byte(bug822src), test.path)
 		if err != nil {
 			t.Errorf("Error looking for %v: %v", test.path, err)
+		}
+	}
+}
+
+var arrayTests = []struct {
+	path string
+	exp  interface{}
+}{
+	{"", array},
+	{"/0", array[0]},
+	{"/1", array[1]},
+	{"/2", array[2]},
+	{"/3", array[3]},
+	{"/3/0", "baz"},
+	{"/3/1", "bak"},
+	{"/4", array[4]},
+	{"/4/key", "value"},
+}
+
+var array = []interface{}{
+	nil,
+	0.0,
+	"bar",
+	[]interface{}{"baz", "bak"},
+	map[string]interface{}{"key": "value"},
+}
+
+func TestArrayPaths(t *testing.T) {
+	for _, test := range arrayTests {
+		got := Get(array, test.path)
+		if !reflect.DeepEqual(got, test.exp) {
+			t.Errorf("On %v, expected %+v (%T), got %+v (%T)",
+				test.path, test.exp, test.exp, got, got)
+			t.Fail()
+		} else {
+			t.Logf("Success - got %v for %v", got, test.path)
 		}
 	}
 }
