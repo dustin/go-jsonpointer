@@ -29,6 +29,23 @@ var ptests = []struct {
 	{"/g/n/r", "where's tito?"},
 }
 
+func TestFindDecode(t *testing.T) {
+	in := []byte(objSrc)
+
+	var fl float64
+	if err := FindDecode(in, "/g|h", &fl); err != nil {
+		t.Errorf("Failed to decode /g|h: %v", err)
+	}
+	if fl != 4.0 {
+		t.Errorf("Expected 4.0 at /g|h, got %v", fl)
+	}
+
+	fl = 0
+	if err := FindDecode(in, "/z", &fl); err == nil {
+		t.Errorf("Expected failure to decode /z: %v", err)
+	}
+}
+
 func TestListPointers(t *testing.T) {
 	got, err := ListPointers([]byte(objSrc))
 	if err != nil {

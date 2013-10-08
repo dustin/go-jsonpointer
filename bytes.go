@@ -69,6 +69,16 @@ func isSpace(c rune) bool {
 	return c == ' ' || c == '\t' || c == '\r' || c == '\n'
 }
 
+// Find an object by JSONPointer path.  Decode result.  Errors if a
+// properly formatted JSON document can't be found at the given path.
+func FindDecode(data []byte, path string, into interface{}) error {
+	d, err := Find(data, path)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(d, into)
+}
+
 // Find a section of raw JSON by specifying a JSONPointer.
 func Find(data []byte, path string) ([]byte, error) {
 	if path == "" {
