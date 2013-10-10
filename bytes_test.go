@@ -223,6 +223,27 @@ func BenchmarkManyPointer(b *testing.B) {
 	}
 }
 
+func TestMustParseInt(t *testing.T) {
+	tests := map[string]bool{
+		"":   true,
+		"0":  false,
+		"13": false,
+	}
+
+	for in, out := range tests {
+		var panicked bool
+		func() {
+			defer func() {
+				panicked = recover() != nil
+			}()
+			mustParseInt(in)
+			if panicked != out {
+				t.Logf("Expected panicked=%v", panicked)
+			}
+		}()
+	}
+}
+
 var codeJSON []byte
 
 func init() {

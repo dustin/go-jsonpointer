@@ -155,6 +155,14 @@ func sliceToEnd(s []string) []string {
 
 }
 
+func mustParseInt(s string) int {
+	n, err := strconv.Atoi(s)
+	if err == nil {
+		return n
+	}
+	panic(err)
+}
+
 // List all possible pointers from the given input.
 func ListPointers(data []byte) ([]string, error) {
 	rv := []string{""}
@@ -180,10 +188,7 @@ func ListPointers(data []byte) ([]string, error) {
 		case json.ScanBeginLiteral:
 			beganLiteral = offset
 		case json.ScanArrayValue:
-			n, err := strconv.Atoi(current[len(current)-1])
-			if err != nil {
-				return nil, err
-			}
+			n := mustParseInt(current[len(current)-1])
 			current[len(current)-1] = strconv.Itoa(n + 1)
 		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
 			current = sliceToEnd(current)
