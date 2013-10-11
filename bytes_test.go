@@ -244,6 +244,13 @@ func TestMustParseInt(t *testing.T) {
 	}
 }
 
+func TestFindBrokenJSON(t *testing.T) {
+	x, err := Find([]byte(`{]`), "/foo/x")
+	if err == nil {
+		t.Errorf("Expected error, got %q", x)
+	}
+}
+
 var codeJSON []byte
 
 func init() {
