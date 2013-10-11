@@ -42,7 +42,11 @@ func TestFindDecode(t *testing.T) {
 
 	fl = 0
 	if err := FindDecode(in, "/z", &fl); err == nil {
-		t.Errorf("Expected failure to decode /z: %v", err)
+		t.Errorf("Expected failure to decode /z: got %q", fl)
+	}
+
+	if err := FindDecode([]byte(`{"a": 1.x35}`), "/a", &fl); err == nil {
+		t.Errorf("Expected failure, got %v", fl)
 	}
 }
 
