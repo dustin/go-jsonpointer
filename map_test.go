@@ -32,6 +32,8 @@ var tests = []struct {
 	{"", obj},
 	{"/foo", []interface{}{"bar", "baz"}},
 	{"/foo/0", "bar"},
+	{"/foo/99", nil},
+	{"/foo/0/3", nil},
 	{"/", 0.0},
 	{"/a~1b", 1.0},
 	{"/c%d", 2.0},
