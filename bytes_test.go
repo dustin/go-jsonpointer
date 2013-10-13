@@ -77,6 +77,24 @@ func TestPointerRoot(t *testing.T) {
 	}
 }
 
+func TestPointerManyRoot(t *testing.T) {
+	got, err := FindMany([]byte(objSrc), []string{""})
+	if err != nil {
+		t.Fatalf("Error finding root: %v", err)
+	}
+	if !reflect.DeepEqual([]byte(objSrc), got[""]) {
+		t.Fatalf("Error finding root, found\n%s\n, wanted\n%s",
+			got, objSrc)
+	}
+}
+
+func TestPointerManyBroken(t *testing.T) {
+	got, err := FindMany([]byte(`{"a": {"b": "something}}`), []string{"/a/b"})
+	if err == nil {
+		t.Errorf("Expected error parsing broken JSON, got %v", got)
+	}
+}
+
 func TestPointerMissing(t *testing.T) {
 	got, err := Find([]byte(objSrc), "/missing")
 	if err != nil {
