@@ -274,41 +274,29 @@ func TestFindBrokenJSON(t *testing.T) {
 }
 
 func TestGrokLiteral(t *testing.T) {
+	brokenStr := "---broken---"
 	tests := []struct {
-		in       []byte
-		succeeds bool
-		exp      string
+		in  []byte
+		exp string
 	}{
-		{[]byte(`"simple"`), true, "simple"},
-		{[]byte(`"has\nnewline"`), true, "has\nnewline"},
-		{[]byte(`"broken`), false, ""},
+		{[]byte(`"simple"`), "simple"},
+		{[]byte(`"has\nnewline"`), "has\nnewline"},
+		{[]byte(`"broken`), brokenStr},
 	}
 
 	for _, test := range tests {
-		var success bool
 		var got string
 		func() {
 			defer func() {
 				if e := recover(); e != nil {
-					success = false
+					got = brokenStr
 				}
 			}()
 			got = grokLiteral(test.in)
-			success = true
 		}()
-		if success {
-			if !test.succeeds {
-				t.Errorf("Expected failure on %s, got %q",
-					test.in, got)
-			} else if got != test.exp {
-				t.Errorf("on %s, expected %q, got %q",
-					test.in, test.exp, got)
-			}
-		} else {
-			if test.succeeds {
-				t.Errorf("Expected success, but failed on %s",
-					test.in)
-			}
+		if test.exp != got {
+			t.Errorf("Expected %q for %s, got %q",
+				test.exp, test.in, got)
 		}
 	}
 }
