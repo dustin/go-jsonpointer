@@ -230,10 +230,7 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 		case json.ScanBeginLiteral:
 			beganLiteral = offset
 		case json.ScanArrayValue:
-			n, err := strconv.Atoi(current[len(current)-1])
-			if err != nil {
-				return nil, err
-			}
+			n := mustParseInt(current[len(current)-1])
 			current[len(current)-1] = strconv.Itoa(n + 1)
 		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
 			current = current[:len(current)-1]
