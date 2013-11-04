@@ -148,7 +148,30 @@ func TestManyPointersMissing(t *testing.T) {
 		t.Fatalf("Expected empty looking for many /missing, got %v",
 			got)
 	}
+}
 
+var badDocs = [][]byte{
+	[]byte{}, []byte(" "), nil,
+	[]byte{'{'}, []byte{'['},
+	[]byte{'}'}, []byte{']'},
+}
+
+func TestManyPointersBadDoc(t *testing.T) {
+	for _, b := range badDocs {
+		got, _ := FindMany(b, []string{"/broken"})
+		if len(got) > 0 {
+			t.Errorf("Expected failure on %v, got %v", b, got)
+		}
+	}
+}
+
+func TestPointersBadDoc(t *testing.T) {
+	for _, b := range badDocs {
+		got, _ := Find(b, "/broken")
+		if len(got) > 0 {
+			t.Errorf("Expected failure on %s, got %v", b, got)
+		}
+	}
 }
 
 func TestPointer(t *testing.T) {
