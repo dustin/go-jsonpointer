@@ -1,7 +1,6 @@
 package jsonpointer
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -9,8 +8,6 @@ import (
 
 	"github.com/dustin/gojson"
 )
-
-var errUnparsable = errors.New("unparsable input")
 
 func arreq(a, b []string) bool {
 	if len(a) == len(b) {
