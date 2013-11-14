@@ -10,7 +10,7 @@ import (
 	"github.com/dustin/gojson"
 )
 
-var unparsable = errors.New("I can't parse this")
+var errUnparsable = errors.New("unparsable input")
 
 func arreq(a, b []string) bool {
 	if len(a) == len(b) {
@@ -69,8 +69,9 @@ func isSpace(c rune) bool {
 	return c == ' ' || c == '\t' || c == '\r' || c == '\n'
 }
 
-// Find an object by JSONPointer path.  Decode result.  Errors if a
-// properly formatted JSON document can't be found at the given path.
+// FindDecode finds an object by JSONPointer path and then decode the
+// result into a user-specified object.  Errors if a properly
+// formatted JSON document can't be found at the given path.
 func FindDecode(data []byte, path string, into interface{}) error {
 	d, err := Find(data, path)
 	if err != nil {
@@ -115,7 +116,7 @@ func Find(data []byte, path string) ([]byte, error) {
 		case json.ScanContinue, json.ScanSkipSpace,
 			json.ScanBeginObject, json.ScanEnd:
 		default:
-			return nil, fmt.Errorf("Found unhandled json op: %v", newOp)
+			return nil, fmt.Errorf("found unhandled json op: %v", newOp)
 		}
 
 		if (newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
@@ -154,7 +155,7 @@ func mustParseInt(s string) int {
 	panic(err)
 }
 
-// List all possible pointers from the given input.
+// ListPointers lists all possible pointers from the given input.
 func ListPointers(data []byte) ([]string, error) {
 	rv := []string{""}
 
@@ -194,7 +195,7 @@ func ListPointers(data []byte) ([]string, error) {
 	return rv, nil
 }
 
-// Find a section of raw JSON by specifying a JSONPointer.
+// FindMany finds several jsonpointers in one pass through the input.
 func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 	tpaths := make([]string, 0, len(paths))
 	m := map[string][]byte{}

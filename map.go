@@ -1,5 +1,4 @@
-// JSON Pointer path access to either raw JSON bytes or a
-// map[string]interface{}
+// Package jsonpointer implements RFC6901 JSON Pointers
 package jsonpointer
 
 import (
