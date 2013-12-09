@@ -102,16 +102,17 @@ func Find(data []byte, path string) ([]byte, error) {
 		case json.ScanBeginArray:
 			current = append(current, "0")
 		case json.ScanObjectKey:
-			current = append(current, grokLiteral(data[beganLiteral-1:offset-1]))
+			current[len(current)-1] = grokLiteral(data[beganLiteral-1 : offset-1])
 		case json.ScanBeginLiteral:
 			beganLiteral = offset
 		case json.ScanArrayValue:
 			n := mustParseInt(current[len(current)-1])
 			current[len(current)-1] = strconv.Itoa(n + 1)
-		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
+		case json.ScanEndArray, json.ScanEndObject:
 			current = sliceToEnd(current)
-		case json.ScanContinue, json.ScanSkipSpace,
-			json.ScanBeginObject, json.ScanEnd:
+		case json.ScanBeginObject:
+			current = append(current, "")
+		case json.ScanContinue, json.ScanSkipSpace, json.ScanObjectValue, json.ScanEnd:
 		default:
 			return nil, fmt.Errorf("found unhandled json op: %v", newOp)
 		}

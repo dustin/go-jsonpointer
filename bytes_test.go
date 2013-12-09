@@ -42,7 +42,7 @@ func TestFindDecode(t *testing.T) {
 
 	fl = 0
 	if err := FindDecode(in, "/z", &fl); err == nil {
-		t.Errorf("Expected failure to decode /z: got %q", fl)
+		t.Errorf("Expected failure to decode /z: got %v", fl)
 	}
 
 	if err := FindDecode([]byte(`{"a": 1.x35}`), "/a", &fl); err == nil {
@@ -320,6 +320,33 @@ func TestGrokLiteral(t *testing.T) {
 		if test.exp != got {
 			t.Errorf("Expected %q for %s, got %q",
 				test.exp, test.in, got)
+		}
+	}
+}
+
+func TestSerieslySample(t *testing.T) {
+	data, err := ioutil.ReadFile("testdata/serieslysample.json")
+	if err != nil {
+		t.Fatalf("Error opening sample file: %v", err)
+	}
+
+	tests := []struct {
+		pointer string
+		exp     string
+	}{
+		{"/kind", "Listing"},
+		{"/data/children/0/data/id", "w568e"},
+		{"/data/children/0/data/name", "t3_w568e"},
+	}
+
+	for _, test := range tests {
+		var found string
+		err := FindDecode(data, test.pointer, &found)
+		if err != nil {
+			t.Errorf("Error on %v: %v", test.pointer, err)
+		}
+		if found != test.exp {
+			t.Errorf("Expected %q, got %q", test.exp, found)
 		}
 	}
 }
