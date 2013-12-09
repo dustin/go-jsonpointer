@@ -174,14 +174,19 @@ func ListPointers(data []byte) ([]string, error) {
 		case json.ScanBeginArray:
 			current = append(current, "0")
 		case json.ScanObjectKey:
-			current = append(current, grokLiteral(data[beganLiteral-1:offset-1]))
+			current[len(current)-1] = grokLiteral(data[beganLiteral-1 : offset-1])
 		case json.ScanBeginLiteral:
 			beganLiteral = offset
 		case json.ScanArrayValue:
 			n := mustParseInt(current[len(current)-1])
 			current[len(current)-1] = strconv.Itoa(n + 1)
-		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
+		case json.ScanEndArray, json.ScanEndObject:
 			current = sliceToEnd(current)
+		case json.ScanBeginObject:
+			current = append(current, "")
+		case json.ScanContinue, json.ScanSkipSpace, json.ScanObjectValue, json.ScanEnd:
+		default:
+			return nil, fmt.Errorf("found unhandled json op: %v", newOp)
 		}
 
 		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
@@ -225,14 +230,16 @@ func FindMany(data []byte, paths []string) (map[string][]byte, error) {
 		case json.ScanBeginArray:
 			current = append(current, "0")
 		case json.ScanObjectKey:
-			current = append(current, grokLiteral(data[beganLiteral-1:offset-1]))
+			current[len(current)-1] = grokLiteral(data[beganLiteral-1 : offset-1])
 		case json.ScanBeginLiteral:
 			beganLiteral = offset
 		case json.ScanArrayValue:
 			n := mustParseInt(current[len(current)-1])
 			current[len(current)-1] = strconv.Itoa(n + 1)
-		case json.ScanObjectValue, json.ScanEndArray, json.ScanEndObject:
-			current = current[:len(current)-1]
+		case json.ScanEndArray, json.ScanEndObject:
+			current = sliceToEnd(current)
+		case json.ScanBeginObject:
+			current = append(current, "")
 		}
 
 		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||

@@ -351,6 +351,43 @@ func TestSerieslySample(t *testing.T) {
 	}
 }
 
+func TestSerieslySampleMany(t *testing.T) {
+	data, err := ioutil.ReadFile("testdata/serieslysample.json")
+	if err != nil {
+		t.Fatalf("Error opening sample file: %v", err)
+	}
+
+	keys := []string{"/kind", "/data/children/0/data/id", "/data/children/0/data/name"}
+	exp := []string{` "Listing"`, ` "w568e"`, ` "t3_w568e"`}
+
+	found, err := FindMany(data, keys)
+	if err != nil {
+		t.Fatalf("Error in FindMany: %v", err)
+	}
+
+	for i, k := range keys {
+		if string(found[k]) != exp[i] {
+			t.Errorf("Expected %q on %q, got %q", exp[i], k, found[k])
+		}
+	}
+}
+
+func TestSerieslySampleList(t *testing.T) {
+	data, err := ioutil.ReadFile("testdata/serieslysample.json")
+	if err != nil {
+		t.Fatalf("Error opening sample file: %v", err)
+	}
+
+	pointers, err := ListPointers(data)
+	if err != nil {
+		t.Fatalf("Error listing pointers: %v", err)
+	}
+	exp := 932
+	if len(pointers) != exp {
+		t.Fatalf("Expected %v pointers, got %v", exp, len(pointers))
+	}
+}
+
 var codeJSON []byte
 
 func init() {
