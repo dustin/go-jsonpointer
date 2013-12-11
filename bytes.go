@@ -184,9 +184,6 @@ func ListPointers(data []byte) ([]string, error) {
 			current = sliceToEnd(current)
 		case json.ScanBeginObject:
 			current = append(current, "")
-		case json.ScanContinue, json.ScanSkipSpace, json.ScanObjectValue, json.ScanEnd:
-		default:
-			return nil, fmt.Errorf("found unhandled json op: %v", newOp)
 		}
 
 		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
