@@ -10,6 +10,35 @@ import (
 	"github.com/dustin/gojson"
 )
 
+var three57JSON, poolsJSON, codeJSON, serieslysampleJSON []byte
+var three57Ptrs, poolsPtrs, codePtrs, serieslysamplePtrs []string
+
+func init() {
+	f, err := os.Open("testdata/code.json.gz")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		panic(err)
+	}
+	data, err := ioutil.ReadAll(gz)
+	if err != nil {
+		panic(err)
+	}
+
+	codeJSON = data
+	three57JSON, _ = ioutil.ReadFile("./testdata/357.json")
+	poolsJSON, _ = ioutil.ReadFile("./testdata/pools.json")
+	serieslysampleJSON, _ = ioutil.ReadFile("./testdata/serieslysample.json")
+
+	codePtrs, _ = ListPointers(codeJSON)
+	three57Ptrs, _ = ListPointers(three57JSON)
+	poolsPtrs, _ = ListPointers(poolsJSON)
+	serieslysamplePtrs, _ = ListPointers(serieslysampleJSON)
+}
+
 var ptests = []struct {
 	path string
 	exp  interface{}
@@ -175,7 +204,6 @@ func TestPointersBadDoc(t *testing.T) {
 }
 
 func TestPointer(t *testing.T) {
-
 	for _, test := range ptests {
 		got, err := Find([]byte(objSrc), test.path)
 		var val interface{}
@@ -224,47 +252,13 @@ func TestPointerCoder(t *testing.T) {
 }
 
 func TestCBugg406(t *testing.T) {
-	data, err := ioutil.ReadFile("testdata/pools.json")
-	if err != nil {
-		t.Fatalf("Error reading pools data: %v", err)
-	}
-
-	found, err := Find(data, "/implementationVersion")
+	found, err := Find(poolsJSON, "/implementationVersion")
 	if err != nil {
 		t.Fatalf("Failed to find thing: %v", err)
 	}
 	exp := ` "2.0.0-1976-rel-enterprise"`
 	if string(found) != exp {
 		t.Fatalf("Expected %q, got %q", exp, found)
-	}
-}
-
-func BenchmarkEncodePointer(b *testing.B) {
-	aPath := []string{"a", "ab", "a~0b", "a~1b", "a~0~1~0~1b"}
-	for i := 0; i < b.N; i++ {
-		encodePointer(aPath)
-	}
-}
-
-func BenchmarkAll(b *testing.B) {
-	obj := []byte(objSrc)
-	for i := 0; i < b.N; i++ {
-		for _, test := range tests {
-			Find(obj, test.path)
-		}
-	}
-}
-
-func BenchmarkManyPointer(b *testing.B) {
-	pointers := []string{}
-	for _, test := range ptests {
-		pointers = append(pointers, test.path)
-	}
-	obj := []byte(objSrc)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		FindMany(obj, pointers)
 	}
 }
 
@@ -325,11 +319,6 @@ func TestGrokLiteral(t *testing.T) {
 }
 
 func TestSerieslySample(t *testing.T) {
-	data, err := ioutil.ReadFile("testdata/serieslysample.json")
-	if err != nil {
-		t.Fatalf("Error opening sample file: %v", err)
-	}
-
 	tests := []struct {
 		pointer string
 		exp     string
@@ -341,7 +330,7 @@ func TestSerieslySample(t *testing.T) {
 
 	for _, test := range tests {
 		var found string
-		err := FindDecode(data, test.pointer, &found)
+		err := FindDecode(serieslysampleJSON, test.pointer, &found)
 		if err != nil {
 			t.Errorf("Error on %v: %v", test.pointer, err)
 		}
@@ -352,15 +341,10 @@ func TestSerieslySample(t *testing.T) {
 }
 
 func TestSerieslySampleMany(t *testing.T) {
-	data, err := ioutil.ReadFile("testdata/serieslysample.json")
-	if err != nil {
-		t.Fatalf("Error opening sample file: %v", err)
-	}
-
 	keys := []string{"/kind", "/data/children/0/data/id", "/data/children/0/data/name"}
 	exp := []string{` "Listing"`, ` "w568e"`, ` "t3_w568e"`}
 
-	found, err := FindMany(data, keys)
+	found, err := FindMany(serieslysampleJSON, keys)
 	if err != nil {
 		t.Fatalf("Error in FindMany: %v", err)
 	}
@@ -373,12 +357,7 @@ func TestSerieslySampleMany(t *testing.T) {
 }
 
 func TestSerieslySampleList(t *testing.T) {
-	data, err := ioutil.ReadFile("testdata/serieslysample.json")
-	if err != nil {
-		t.Fatalf("Error opening sample file: %v", err)
-	}
-
-	pointers, err := ListPointers(data)
+	pointers, err := ListPointers(serieslysampleJSON)
 	if err != nil {
 		t.Fatalf("Error listing pointers: %v", err)
 	}
@@ -388,24 +367,109 @@ func TestSerieslySampleList(t *testing.T) {
 	}
 }
 
-var codeJSON []byte
+func BenchmarkEncodePointer(b *testing.B) {
+	aPath := []string{"a", "ab", "a~0b", "a~1b", "a~0~1~0~1b"}
+	for i := 0; i < b.N; i++ {
+		encodePointer(aPath)
+	}
+}
 
-func init() {
-	f, err := os.Open("testdata/code.json.gz")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		panic(err)
-	}
-	data, err := ioutil.ReadAll(gz)
-	if err != nil {
-		panic(err)
-	}
+// Benchmark ListPointers
 
-	codeJSON = data
+func BenchmarkList357(b *testing.B) {
+	b.SetBytes(int64(len(three57JSON)))
+	for i := 0; i < b.N; i++ {
+		ListPointers(three57JSON)
+	}
+}
+
+func BenchmarkListPools(b *testing.B) {
+	b.SetBytes(int64(len(poolsJSON)))
+	for i := 0; i < b.N; i++ {
+		ListPointers(poolsJSON)
+	}
+}
+
+func BenchmarkListSample(b *testing.B) {
+	b.SetBytes(int64(len(serieslysampleJSON)))
+	for i := 0; i < b.N; i++ {
+		ListPointers(serieslysampleJSON)
+	}
+}
+
+func BenchmarkListCode(b *testing.B) {
+	b.SetBytes(int64(len(codeJSON)))
+	for i := 0; i < b.N; i++ {
+		ListPointers(codeJSON)
+	}
+}
+
+// Benchmark Find in raw json with pointer.
+
+func BenchmarkFind357(b *testing.B) {
+	l := len(three57Ptrs)
+	b.SetBytes(int64(len(three57JSON)))
+	for i := 0; i < b.N; i++ {
+		Find(three57JSON, three57Ptrs[i%l])
+	}
+}
+
+func BenchmarkFindPools(b *testing.B) {
+	l := len(poolsPtrs)
+	b.SetBytes(int64(len(poolsJSON)))
+	for i := 0; i < b.N; i++ {
+		Find(poolsJSON, poolsPtrs[i%l])
+	}
+}
+
+func BenchmarkFindSample(b *testing.B) {
+	l := len(serieslysamplePtrs)
+	b.SetBytes(int64(len(serieslysampleJSON)))
+	for i := 0; i < b.N; i++ {
+		Find(serieslysampleJSON, serieslysamplePtrs[i%l])
+	}
+}
+
+func BenchmarkFindCode(b *testing.B) {
+	l := len(codePtrs)
+	b.SetBytes(int64(len(codeJSON)))
+	for i := 0; i < b.N; i++ {
+		Find(codeJSON, codePtrs[i%l])
+	}
+}
+
+// Benchmark FindMany in raw json with one or more pointers.
+
+func BenchmarkFindMany357(b *testing.B) {
+	l := len(three57Ptrs)
+	b.SetBytes(int64(len(three57JSON)))
+	for i := 0; i < (b.N / l); i++ {
+		FindMany(three57JSON, three57Ptrs)
+	}
+}
+
+func BenchmarkFindManyPools(b *testing.B) {
+	l := len(poolsPtrs)
+	b.SetBytes(int64(len(poolsJSON)))
+	for i := 0; i < (b.N / l); i++ {
+		FindMany(poolsJSON, poolsPtrs)
+	}
+}
+
+func BenchmarkFindManySample(b *testing.B) {
+	l := len(serieslysamplePtrs)
+	b.SetBytes(int64(len(serieslysampleJSON)))
+	for i := 0; i < (b.N / l); i++ {
+		FindMany(serieslysampleJSON, serieslysamplePtrs)
+	}
+}
+
+func BenchmarkFindManyCode(b *testing.B) {
+	l := len(codePtrs)
+	b.SetBytes(int64(len(codeJSON)))
+	for i := 0; i < (b.N / l); i++ {
+		FindMany(codeJSON, codePtrs)
+	}
 }
 
 func BenchmarkLarge3Key(b *testing.B) {
@@ -491,8 +555,8 @@ func BenchmarkLargeMap(b *testing.B) {
 	}
 	b.SetBytes(int64(len(codeJSON)))
 
+	m := map[string]interface{}{}
 	for i := 0; i < b.N; i++ {
-		m := map[string]interface{}{}
 		err := json.Unmarshal(codeJSON, &m)
 		if err != nil {
 			b.Fatalf("Error parsing JSON: %v", err)

@@ -3,6 +3,7 @@ package jsonpointer
 import (
 	"io/ioutil"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/dustin/gojson"
@@ -29,11 +30,10 @@ var tests = []struct {
 	path string
 	exp  interface{}
 }{
-	{"", obj},
-	{"/foo", []interface{}{"bar", "baz"}},
-	{"/foo/0", "bar"},
 	{"/foo/99", nil},
 	{"/foo/0/3", nil},
+	{"/foo/0", "bar"},
+	{"/foo", []interface{}{"bar", "baz"}},
 	{"/", 0.0},
 	{"/a~1b", 1.0},
 	{"/c%d", 2.0},
@@ -45,9 +45,10 @@ var tests = []struct {
 	{"/m~0n", 8.0},
 	{"/g~1n~1r", "has slash, will travel"},
 	{"/g/n/r", "where's tito?"},
+	{"", obj},
 }
 
-func init() {
+func unmarshalObjSrc() {
 	err := json.Unmarshal([]byte(objSrc), &obj)
 	if err != nil {
 		panic(err)
@@ -55,6 +56,7 @@ func init() {
 }
 
 func TestPaths(t *testing.T) {
+	unmarshalObjSrc()
 	for _, test := range tests {
 		got := Get(obj, test.path)
 		if !reflect.DeepEqual(got, test.exp) {
@@ -67,10 +69,237 @@ func TestPaths(t *testing.T) {
 	}
 }
 
-func BenchmarkPaths(b *testing.B) {
+func TestSet(t *testing.T) {
+	unmarshalObjSrc()
+	for _, test := range tests {
+		if test.path == "" {
+			continue
+		}
+
+		err := Set(obj, test.path, "testing set")
+		if test.exp == nil {
+			if err == nil {
+				t.Errorf("expected error for %v", test.path)
+				t.Fail()
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("On %v", test.path)
+			t.Fail()
+		}
+
+		got := Get(obj, test.path)
+		if got != "testing set" {
+			t.Errorf("On %v, expected `testing set`, got %+v (%T)",
+				test.path, got, got)
+			t.Fail()
+		} else {
+			t.Logf("Success - got %v for %v", got, test.path)
+		}
+	}
+}
+
+func TestDelete(t *testing.T) {
+	unmarshalObjSrc()
+	for _, test := range tests {
+		if test.path == "" {
+			continue
+		}
+		err := Delete(obj, test.path)
+		if strings.HasPrefix(test.path, "/foo/") {
+			if err == nil {
+				t.Errorf("expected error on %v, can't be idempotent", test.path)
+				t.Fail()
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("On %v", test.path)
+			t.Fail()
+		}
+		got := Get(obj, test.path)
+		if got != nil {
+			t.Errorf("On %v, expected `nil`, got %+v (%T)", test.path, got, got)
+			t.Fail()
+		} else {
+			t.Logf("Success - got %v for %v", got, test.path)
+		}
+	}
+}
+
+func TestDeleteAny(t *testing.T) {
+	unmarshalObjSrc()
+	for _, test := range tests {
+		if test.path == "" {
+			continue
+		}
+		err := DeleteAny(obj, test.path)
+		if test.exp == nil {
+			if err == nil {
+				t.Errorf("expected error for %v", test.path)
+				t.Fail()
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("On %v", test.path)
+			t.Fail()
+		}
+		got := Get(obj, test.path)
+		if test.exp == "bar" {
+			if got.(string) != "baz" {
+				t.Errorf("On %v, expected [baz], got %+v (%T)",
+					test.path, got, got)
+				t.Fail()
+			}
+		} else if got != nil {
+			t.Errorf("On %v, expected `nil`, got %+v (%T)", test.path, got, got)
+			t.Fail()
+		} else {
+			t.Logf("Success - got %v for %v", got, test.path)
+		}
+	}
+}
+
+func TestDeleteAny1Len(t *testing.T) {
+	m := map[string]interface{}{
+		"foo": []interface{}{"bar"},
+	}
+	path := "/foo/0"
+	err := DeleteAny(m, path)
+	if err != nil {
+		t.Errorf("On %v", path)
+		t.Fail()
+	}
+	got := Get(m, path)
+	if got != nil {
+		t.Errorf("On %v, expected `nil`, got %+v (%T)", path, got, got)
+		t.Fail()
+	} else {
+		t.Logf("Success - got %v for %v", got, path)
+	}
+}
+
+func BenchmarkGet357(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(three57JSON), &obj)
+	l := len(three57Ptrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := three57Ptrs[i%l]
+		Get(obj, path)
+	}
+}
+
+func BenchmarkGetPools(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(poolsJSON), &obj)
+	l := len(poolsPtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := poolsPtrs[i%l]
+		Get(obj, path)
+	}
+}
+
+func BenchmarkGetSample(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(serieslysampleJSON), &obj)
+	l := len(serieslysamplePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := serieslysamplePtrs[i%l]
+		Get(obj, path)
+	}
+}
+
+func BenchmarkGetCode(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(codeJSON), &obj)
+	l := len(codePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := codePtrs[i%l]
+		Get(obj, path)
+	}
+}
+
+func BenchmarkSet357(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(three57JSON), &obj)
+	l := len(three57Ptrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := three57Ptrs[i%l]
+		if path == "" {
+			continue
+		}
+		Set(obj, path, "bench")
+	}
+}
+
+func BenchmarkSetPools(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(poolsJSON), &obj)
+	l := len(poolsPtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := poolsPtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Set(obj, path, "bench")
+	}
+}
+
+func BenchmarkSetSample(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(serieslysampleJSON), &obj)
+	l := len(serieslysamplePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := serieslysamplePtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Set(obj, path, "bench")
+	}
+}
+
+func BenchmarkSetCode(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(codeJSON), &obj)
+	l := len(codePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := codePtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Set(obj, path, "bench")
+	}
+}
+
+func BenchmarkDelete(b *testing.B) {
+	unmarshalObjSrc()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, test := range tests {
-			Get(obj, test.path)
+			if test.path == "" {
+				continue
+			}
+			Delete(obj, test.path)
+		}
+	}
+}
+
+func BenchmarkDeleteAny(b *testing.B) {
+	unmarshalObjSrc()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, test := range tests {
+			if test.path == "" {
+				continue
+			}
+			DeleteAny(obj, test.path)
 		}
 	}
 }
