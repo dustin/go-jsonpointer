@@ -25,14 +25,27 @@ func arreq(a, b []string) bool {
 var decoder = strings.NewReplacer("~1", "/", "~0", "~")
 
 func parsePointer(s string) []string {
-	a := strings.Split(s[1:], "/")
-
-	for i := range a {
-		if strings.Contains(a[i], "~") {
-			a[i] = decoder.Replace(a[i])
+	parts, part := make([]string, 0, 10), ""
+	start, esc := 0, false
+	for i := 1; i < len(s); i++ {
+		switch s[i] {
+		case '/':
+			part = s[start+1 : i]
+			if esc {
+				part = decoder.Replace(part)
+			}
+			parts = append(parts, part)
+			start, esc = i, false
+		case '~':
+			esc = true
 		}
 	}
-	return a
+	part = s[start+1:]
+	if esc {
+		part = decoder.Replace(part)
+	}
+	parts = append(parts, part)
+	return parts
 }
 
 func encodePointer(p []string) string {

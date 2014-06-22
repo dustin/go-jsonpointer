@@ -374,6 +374,28 @@ func BenchmarkEncodePointer(b *testing.B) {
 	}
 }
 
+func BenchmarkParsePointerSmall(b *testing.B) {
+	path := "/foo/g/0"
+	for i := 0; i < b.N; i++ {
+		parsePointer(path)
+	}
+}
+
+func BenchmarkParsePointerMedium(b *testing.B) {
+	path := "/foo/g~1n~1r/0/hello"
+	for i := 0; i < b.N; i++ {
+		parsePointer(path)
+	}
+}
+
+func BenchmarkParsePointerLarge(b *testing.B) {
+	path := encodePointer([]string{"a", "ab", "a~0b", "a~1b", "a~0~1~0~1b"})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		parsePointer(path)
+	}
+}
+
 // Benchmark ListPointers
 
 func BenchmarkList357(b *testing.B) {
