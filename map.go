@@ -131,8 +131,6 @@ func DeleteAny(m map[string]interface{}, path string) (err error) {
 			v = v[:len(v)-1]
 			parts := parsePointer(path)
 			Set(m, "/"+strings.Join(parts[:len(parts)-1], "/"), v)
-		} else if err != nil {
-			return err
 		} else {
 			return ErrorInvalidPath
 		}
@@ -145,7 +143,6 @@ func DeleteAny(m map[string]interface{}, path string) (err error) {
 
 // Incr increments referenced field's value by `val`.
 // not an idempotent operation.
-// TODO: write unit-test case.
 func Incr(m map[string]interface{}, path string, val int) error {
 	return mutateField(m, path, func(old interface{}) (interface{}, error) {
 		if value, ok := old.(float64); ok {
@@ -157,12 +154,11 @@ func Incr(m map[string]interface{}, path string, val int) error {
 
 // Incrs increments referenced field's array elements by list of vals.
 // not an idempotent operation.
-// TODO: write unit-test case.
 func Incrs(m map[string]interface{}, path string, vals ...int) error {
 	return mutateField(m, path, func(old interface{}) (interface{}, error) {
-		if values, ok := old.([]float64); ok {
-			for i := range values {
-				values[i] += float64(vals[i])
+		if values, ok := old.([]interface{}); ok {
+			for i, val := range vals {
+				values[i] = values[i].(float64) + float64(val)
 			}
 			return values, nil
 		}
@@ -172,7 +168,6 @@ func Incrs(m map[string]interface{}, path string, vals ...int) error {
 
 // Decr decrements referenced field's value by `val`.
 // not an idempotent operation.
-// TODO: write unit-test case.
 func Decr(m map[string]interface{}, path string, val int) error {
 	return mutateField(m, path, func(old interface{}) (interface{}, error) {
 		if value, ok := old.(float64); ok {
@@ -221,9 +216,6 @@ func mutateField(m map[string]interface{}, path string, fn mHandler) error {
 func getContainer(m map[string]interface{}, path string) (container interface{}, last string, err error) {
 	parts := strings.Split(path[1:], "/")
 	l := len(parts)
-	if l == 0 {
-		return container, last, ErrorInvalidPath
-	}
 
 	container = m
 
