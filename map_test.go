@@ -185,7 +185,7 @@ func TestDeleteAny1Len(t *testing.T) {
 
 func TestIncr(t *testing.T) {
 	var obj map[string]interface{}
-	doc := `{ "stats" : [0, true]}`
+	doc := `{ "stats" : [0, 1, true], "counter": 0}`
 	json.Unmarshal([]byte(doc), &obj)
 
 	if err := Incr(obj, "/invalid/path", 2); err != ErrorInvalidPath {
@@ -193,62 +193,63 @@ func TestIncr(t *testing.T) {
 		t.Fail()
 	}
 
-	if err := Incr(obj, "/stats/1", 2); err != ErrorInvalidType {
+	if err := Incr(obj, "/stats/2", 2); err != ErrorInvalidType {
 		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
 		t.Fail()
 	}
-	if err := Incr(obj, "/stats/2", 2); err != ErrorInvalidPath {
+	if err := Incr(obj, "/stats/3", 2); err != ErrorInvalidPath {
 		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
 		t.Fail()
 	}
+	if err := Incr(obj, "/counter", 2, 3); err != ErrorInvalidType {
+		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+		t.Fail()
+	}
 
-	if err := Incr(obj, "/stats/0", 2); err != nil {
-		t.Errorf("failed to increment `/stats/0`")
+	// for []interface{}
+	if err := Incr(obj, "/stats/1", 2); err != nil {
+		t.Errorf("failed to increment `/stats/1` %v", err)
+		t.Fail()
+	}
+	if err := Incr(obj, "/stats", 2, 1); err != nil {
+		t.Errorf("failed to increment `/stats` %v", err)
 		t.Fail()
 	}
 	if v := obj["stats"].([]interface{})[0]; v != 2.0 {
 		t.Errorf("expected `/stats/0` to be 2 found %v\n", v)
 		t.Fail()
 	}
-}
-
-func TestIncrs(t *testing.T) {
-	var obj map[string]interface{}
-	doc := `{ "stats" : { "counters": [0, 0], "invalid": 0 }}`
-	json.Unmarshal([]byte(doc), &obj)
-
-	if err := Incrs(obj, "/invalid/path", 2); err != ErrorInvalidPath {
-		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
+	if v := obj["stats"].([]interface{})[1]; v != 4.0 {
+		t.Errorf("expected `/stats/1` to be 4 found %v\n", v)
 		t.Fail()
 	}
 
-	if err := Incrs(obj, "/stats/invalid", 2); err != ErrorInvalidType {
-		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+	// for []float64{}
+	obj = map[string]interface{}{
+		"stats":   []float64{0, 1},
+		"counter": float64(0),
+	}
+	if err := Incr(obj, "/stats/1", 2); err != nil {
+		t.Errorf("failed to increment `/stats/1` %v", err)
 		t.Fail()
 	}
-
-	if err := Incrs(obj, "/stats/counters", 2); err != nil {
-		t.Errorf("failed to increment `/stats/counters` %v", err)
+	if err := Incr(obj, "/stats", 2, 1); err != nil {
+		t.Errorf("failed to increment `/stats` %v", err)
 		t.Fail()
 	}
-	v := obj["stats"].(map[string]interface{})["counters"]
-	if reflect.DeepEqual(v, []interface{}{2.0, 0.0}) == false {
-		t.Errorf("expected `/stats/counters` to be [2.0, 0.0] found %v\n", v)
+	if v := obj["stats"].([]float64)[0]; v != 2.0 {
+		t.Errorf("expected `/stats/0` to be 2 found %v\n", v)
 		t.Fail()
 	}
-
-	if err := Incrs(obj, "/stats/counters", 2, 1); err != nil {
-		t.Errorf("failed to increment `/stats/counters`")
-		t.Fail()
-	}
-	v = obj["stats"].(map[string]interface{})["counters"]
-	if reflect.DeepEqual(v, []interface{}{4.0, 1.0}) == false {
-		t.Errorf("expected `/stats/counters` to be [4.0, 1.0] found %v\n", v)
+	if v := obj["stats"].([]float64)[1]; v != 4.0 {
+		t.Errorf("expected `/stats/1` to be 4 found %v\n", v)
 		t.Fail()
 	}
 
 	// getContainer() code coverage
-	if err := Incrs(obj, "/stats/counters/3/1", 2); err != ErrorInvalidPath {
+	doc = `{ "stats" : { "counters": [0, 0], "invalid": 0 }}`
+	json.Unmarshal([]byte(doc), &obj)
+	if err := Incr(obj, "/stats/counters/3/1", 2); err != ErrorInvalidPath {
 		t.Errorf("expected %v got %v", ErrorInvalidPath, err)
 		t.Fail()
 	}
@@ -256,23 +257,86 @@ func TestIncrs(t *testing.T) {
 
 func TestDecr(t *testing.T) {
 	var obj map[string]interface{}
-	doc := `{ "stat~s" : { "count~er": 2.0, "invalid": true }}`
+	doc := `{ "stats" : [10, 1, true], "counter": 2.0 }`
 	json.Unmarshal([]byte(doc), &obj)
 
 	if err := Decr(obj, "/invalid/path", 1.0); err != ErrorInvalidPath {
 		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
 		t.Fail()
 	}
-	if err := Decr(obj, "/stat~0s/invalid", 2); err != ErrorInvalidType {
+
+	if err := Decr(obj, "/stats/2", 2); err != ErrorInvalidType {
 		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
 		t.Fail()
 	}
-	if err := Decr(obj, "/stat~0s/count~0er", 10.0); err != nil {
-		t.Errorf("failed to increment `/stat0s/count~er`")
+	if err := Decr(obj, "/stats/3", 2); err != ErrorInvalidPath {
+		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
 		t.Fail()
 	}
-	if v := obj["stat~s"].(map[string]interface{})["count~er"]; v != -8.0 {
-		t.Errorf("expected `/stat~s/count~er` to be 2 found %v\n", v)
+	if err := Decr(obj, "/counter", 2, 3); err != ErrorInvalidType {
+		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+		t.Fail()
+	}
+
+	// for []interface{}
+	if err := Decr(obj, "/stats/1", 2); err != nil {
+		t.Errorf("failed to decrement `/stats/1` %v", err)
+		t.Fail()
+	}
+	if err := Decr(obj, "/stats", 2, 1); err != nil {
+		t.Errorf("failed to decrement `/stats` %v", err)
+		t.Fail()
+	}
+	if v := obj["stats"].([]interface{})[0]; v != 8.0 {
+		t.Errorf("expected `/stats/0` to be 8.0 found %v\n", v)
+		t.Fail()
+	}
+	if v := obj["stats"].([]interface{})[1]; v != -2.0 {
+		t.Errorf("expected `/stats/1` to be -2.0 found %v\n", v)
+		t.Fail()
+	}
+
+	// for []float64{}
+	obj = map[string]interface{}{
+		"stats":   []float64{10, 1},
+		"counter": float64(2),
+	}
+
+	if err := Decr(obj, "/stats/3", 2); err != ErrorInvalidPath {
+		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
+		t.Fail()
+	}
+
+	if err := Decr(obj, "/stats/1", 2); err != nil {
+		t.Errorf("failed to decrement `/stats/1` %v", err)
+		t.Fail()
+	}
+	if err := Decr(obj, "/stats", 2, 1); err != nil {
+		t.Errorf("failed to decrement `/stats` %v", err)
+		t.Fail()
+	}
+	if v := obj["stats"].([]float64)[0]; v != 8.0 {
+		t.Errorf("expected `/stats/0` to be 8.0 found %v\n", v)
+		t.Fail()
+	}
+	if v := obj["stats"].([]float64)[1]; v != -2.0 {
+		t.Errorf("expected `/stats/1` to be -2.0 found %v\n", v)
+		t.Fail()
+	}
+
+	// for code coverage for parsing path with escape sequence.
+	doc = `{ "sta~ts" : { "count~er": 2, "invalid": true }}`
+	json.Unmarshal([]byte(doc), &obj)
+	if err := Decr(obj, "/sta~0ts/invalid", 2); err != ErrorInvalidType {
+		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+		t.Fail()
+	}
+	if err := Decr(obj, "/sta~0ts/count~0er", 10.0); err != nil {
+		t.Errorf("failed to increment `/sta~ts/count~er`")
+		t.Fail()
+	}
+	if v := obj["sta~ts"].(map[string]interface{})["count~er"]; v != -8.0 {
+		t.Errorf("expected `/sta~ts/count~er` to be -8 found %v\n", v)
 		t.Fail()
 	}
 }

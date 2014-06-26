@@ -1,4 +1,4 @@
-// Package jsonpointer implements RFC6901 JSON Pointers
+// Package jsonpointer implements RFC6901 JSON Pointers.
 package jsonpointer
 
 import (
@@ -10,10 +10,12 @@ import (
 // methods are not thread safe.
 // Get(), Set(), Delete() are idempotent ops.
 
-// ErrorInvalidPath specified path does not exist within the document.
+// ErrorInvalidPath is returned when specified path does not refer to a valid
+// field within the document.
 var ErrorInvalidPath = errors.New("jsonpointer.invalidPath")
 
-// ErrorInvalidType specified path does not refer to expected type.
+// ErrorInvalidType is returned when specified path does not refer to expected
+// type.
 var ErrorInvalidType = errors.New("jsonpointer.invalidType")
 
 type mHandler func(old interface{}) (latest interface{}, err error)
@@ -21,32 +23,30 @@ type mHandler func(old interface{}) (latest interface{}, err error)
 // Get the value at the specified path, if returned value is `nil` then
 // specified path in invalid.
 func Get(m map[string]interface{}, path string) (rv interface{}) {
-	switch path {
-	case "":
+	if path == "" {
 		return m
+	}
 
-	default:
-		parts := strings.Split(path[1:], "/")
-		rv = m
-		for _, p := range parts {
-			switch v := rv.(type) {
-			case map[string]interface{}:
-				if strings.Contains(p, "~") {
-					p = strings.Replace(p, "~1", "/", -1)
-					p = strings.Replace(p, "~0", "~", -1)
-				}
-				rv = v[p]
+	parts := strings.Split(path[1:], "/")
+	rv = m
+	for _, p := range parts {
+		switch v := rv.(type) {
+		case map[string]interface{}:
+			if strings.Contains(p, "~") {
+				p = strings.Replace(p, "~1", "/", -1)
+				p = strings.Replace(p, "~0", "~", -1)
+			}
+			rv = v[p]
 
-			case []interface{}:
-				if i, err := strconv.Atoi(p); err == nil && i < len(v) {
-					rv = v[i]
-				} else {
-					return nil
-				}
-
-			default:
+		case []interface{}:
+			if i, err := strconv.Atoi(p); err == nil && i < len(v) {
+				rv = v[i]
+			} else {
 				return nil
 			}
+
+		default:
+			return nil
 		}
 	}
 	return rv
@@ -141,43 +141,66 @@ func DeleteAny(m map[string]interface{}, path string) (err error) {
 	return nil
 }
 
-// Incr increments referenced field's value by `val`.
-// not an idempotent operation.
-func Incr(m map[string]interface{}, path string, val int) error {
+// Incr increments referenced field's value(s) by list of `vals`. To increment
+// a value of type float64 len(vals) must be 1, otherwise referred field
+// is expected to be []float64. This is not an idempotent operation.
+func Incr(m map[string]interface{}, path string, vals ...int) error {
 	return mutateField(m, path, func(old interface{}) (interface{}, error) {
-		if value, ok := old.(float64); ok {
-			return value + float64(val), nil
-		}
-		return nil, ErrorInvalidType
-	})
-}
-
-// Incrs increments referenced field's array elements by list of vals.
-// not an idempotent operation.
-func Incrs(m map[string]interface{}, path string, vals ...int) error {
-	return mutateField(m, path, func(old interface{}) (interface{}, error) {
-		if values, ok := old.([]interface{}); ok {
-			for i, val := range vals {
-				values[i] = values[i].(float64) + float64(val)
+		switch value := old.(type) {
+		case float64:
+			if len(vals) == 1 {
+				return value + float64(vals[0]), nil
 			}
-			return values, nil
+			return nil, ErrorInvalidType
+
+		case []interface{}:
+			for i, val := range vals {
+				value[i] = value[i].(float64) + float64(val)
+			}
+			return value, nil
+
+		case []float64:
+			for i, val := range vals {
+				value[i] = value[i] + float64(val)
+			}
+			return value, nil
 		}
 		return nil, ErrorInvalidType
 	})
 }
 
-// Decr decrements referenced field's value by `val`.
-// not an idempotent operation.
-func Decr(m map[string]interface{}, path string, val int) error {
+// Decr decrements referenced field's value(s) by list of `vals`. To decrement
+// a value of type float64 len(vals) must be 1, otherwise referred field
+// is expected to be []float64. This is not an idempotent operation.
+func Decr(m map[string]interface{}, path string, vals ...int) error {
 	return mutateField(m, path, func(old interface{}) (interface{}, error) {
-		if value, ok := old.(float64); ok {
-			return value - float64(val), nil
+		switch value := old.(type) {
+		case float64:
+			if len(vals) == 1 {
+				return value - float64(vals[0]), nil
+			}
+			return nil, ErrorInvalidType
+
+		case []interface{}:
+			for i, val := range vals {
+				value[i] = value[i].(float64) - float64(val)
+			}
+			return value, nil
+
+		case []float64:
+			for i, val := range vals {
+				value[i] = value[i] - float64(val)
+			}
+			return value, nil
 		}
 		return nil, ErrorInvalidType
 	})
 }
 
 func mutateField(m map[string]interface{}, path string, fn mHandler) error {
+	var err error
+	var latestV interface{}
+
 	container, last, err := getContainer(m, path)
 	if err != nil {
 		return err
@@ -190,27 +213,34 @@ func mutateField(m map[string]interface{}, path string, fn mHandler) error {
 
 	switch v := container.(type) {
 	case map[string]interface{}:
-		latestV, err := fn(v[last])
-		if err != nil {
-			return err
+		if latestV, err = fn(v[last]); err == nil {
+			v[last] = latestV
 		}
-		v[last] = latestV
+
+	case []float64:
+		var i int
+		if i, err = strconv.Atoi(last); err == nil && i < len(v) {
+			if latestV, err = fn(v[i]); err == nil {
+				v[i] = latestV.(float64)
+			}
+		} else {
+			err = ErrorInvalidPath
+		}
 
 	case []interface{}:
-		if i, err := strconv.Atoi(last); err == nil && i < len(v) {
-			latestV, err := fn(v[i])
-			if err != nil {
-				return err
+		var i int
+		if i, err = strconv.Atoi(last); err == nil && i < len(v) {
+			if latestV, err = fn(v[i]); err == nil {
+				v[i] = latestV
 			}
-			v[i] = latestV
 		} else {
-			return ErrorInvalidPath
+			err = ErrorInvalidPath
 		}
 
 	default:
-		return ErrorInvalidPath
+		err = ErrorInvalidPath
 	}
-	return nil
+	return err
 }
 
 func getContainer(m map[string]interface{}, path string) (container interface{}, last string, err error) {
