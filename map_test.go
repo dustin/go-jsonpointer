@@ -3,6 +3,7 @@ package jsonpointer
 import (
 	"io/ioutil"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/dustin/gojson"
@@ -29,11 +30,10 @@ var tests = []struct {
 	path string
 	exp  interface{}
 }{
-	{"", obj},
-	{"/foo", []interface{}{"bar", "baz"}},
-	{"/foo/0", "bar"},
 	{"/foo/99", nil},
 	{"/foo/0/3", nil},
+	{"/foo/0", "bar"},
+	{"/foo", []interface{}{"bar", "baz"}},
 	{"/", 0.0},
 	{"/a~1b", 1.0},
 	{"/c%d", 2.0},
@@ -45,9 +45,14 @@ var tests = []struct {
 	{"/m~0n", 8.0},
 	{"/g~1n~1r", "has slash, will travel"},
 	{"/g/n/r", "where's tito?"},
+	{"", obj},
+	// List of invalid paths for code-coverage.
+	{"/invalid~0/3", nil},
+	{"/foo/invalid/0", nil},
+	{"/foo/3/invalid", nil},
 }
 
-func init() {
+func unmarshalObjSrc() {
 	err := json.Unmarshal([]byte(objSrc), &obj)
 	if err != nil {
 		panic(err)
@@ -55,26 +60,456 @@ func init() {
 }
 
 func TestPaths(t *testing.T) {
+	unmarshalObjSrc()
 	for _, test := range tests {
 		got := Get(obj, test.path)
 		if !reflect.DeepEqual(got, test.exp) {
 			t.Errorf("On %v, expected %+v (%T), got %+v (%T)",
 				test.path, test.exp, test.exp, got, got)
-			t.Fail()
 		} else {
 			t.Logf("Success - got %v for %v", got, test.path)
 		}
 	}
 }
 
-func BenchmarkPaths(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		for _, test := range tests {
-			Get(obj, test.path)
+func TestSet(t *testing.T) {
+	unmarshalObjSrc()
+	newval := "testing set"
+	for _, test := range tests {
+		if test.path == "" {
+			continue
+		}
+
+		err := Set(obj, test.path, newval)
+		if test.exp == nil {
+			if err == nil {
+				t.Errorf("expected error for %v", test.path)
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("On %v", test.path)
+		}
+
+		got := Get(obj, test.path)
+		if got != newval {
+			t.Errorf("On %v, expected %v, got %+v (%T)",
+				test.path, newval, got, got)
+		} else {
+			t.Logf("Success - got %v for %v", got, test.path)
 		}
 	}
 }
 
+func TestDelete(t *testing.T) {
+	unmarshalObjSrc()
+	for _, test := range tests {
+		if test.path == "" {
+			continue
+		}
+		err := Delete(obj, test.path)
+		if strings.HasPrefix(test.path, "/foo/") {
+			if err == nil {
+				t.Errorf("expected error on %v, can't be idempotent", test.path)
+			}
+			continue
+		} else if !strings.Contains(test.path, "/invalid") && err != nil {
+			t.Errorf("On %v, %v", test.path, err)
+		}
+		got := Get(obj, test.path)
+		if got != nil {
+			t.Errorf("On %v, expected `nil`, got %+v (%T)", test.path, got, got)
+		} else {
+			t.Logf("Success - got %v for %v", got, test.path)
+		}
+	}
+}
+
+func TestDeleteAny(t *testing.T) {
+	unmarshalObjSrc()
+	for _, test := range tests {
+		if test.path == "" {
+			continue
+		}
+		err := DeleteAny(obj, test.path)
+		if test.exp == nil {
+			if err == nil {
+				t.Errorf("expected error for %v", test.path)
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("On %v", test.path)
+		}
+		got := Get(obj, test.path)
+		if test.exp == "bar" {
+			if got.(string) != "baz" {
+				t.Errorf("On %v, expected [baz], got %+v (%T)",
+					test.path, got, got)
+			}
+		} else if got != nil {
+			t.Errorf("On %v, expected `nil`, got %+v (%T)", test.path, got, got)
+		} else {
+			t.Logf("Success - got %v for %v", got, test.path)
+		}
+	}
+}
+
+func TestDeleteAny1Len(t *testing.T) {
+	m := map[string]interface{}{
+		"foo": []interface{}{"bar"},
+	}
+	path := "/foo/0"
+	err := DeleteAny(m, path)
+	if err != nil {
+		t.Errorf("On %v", path)
+	}
+	got := Get(m, path)
+	if got != nil {
+		t.Errorf("On %v, expected `nil`, got %+v (%T)", path, got, got)
+	} else {
+		t.Logf("Success - got %v for %v", got, path)
+	}
+}
+
+func TestIncr(t *testing.T) {
+	var obj map[string]interface{}
+	doc := `{ "stats" : [0, 1, true], "counter": 0}`
+	json.Unmarshal([]byte(doc), &obj)
+
+	if err := Incr(obj, "/invalid/path", 2); err != ErrorInvalidPath {
+		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
+	}
+
+	if err := Incr(obj, "/stats/2", 2); err != ErrorInvalidType {
+		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+	}
+	if err := Incr(obj, "/stats/3", 2); err != ErrorInvalidPath {
+		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
+	}
+	if err := Incr(obj, "/counter", 2, 3); err != ErrorInvalidType {
+		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+	}
+
+	// for []interface{}
+	if err := Incr(obj, "/stats/1", 2); err != nil {
+		t.Errorf("failed to increment `/stats/1` %v", err)
+	}
+	if err := Incr(obj, "/stats", 2, 1); err != nil {
+		t.Errorf("failed to increment `/stats` %v", err)
+	}
+	if v := obj["stats"].([]interface{})[0]; v != 2.0 {
+		t.Errorf("expected `/stats/0` to be 2 found %v\n", v)
+	}
+	if v := obj["stats"].([]interface{})[1]; v != 4.0 {
+		t.Errorf("expected `/stats/1` to be 4 found %v\n", v)
+	}
+
+	// for []float64{}
+	obj = map[string]interface{}{
+		"stats":   []float64{0, 1},
+		"counter": float64(0),
+	}
+	if err := Incr(obj, "/stats/1", 2); err != nil {
+		t.Errorf("failed to increment `/stats/1` %v", err)
+	}
+	if err := Incr(obj, "/stats", 2, 1); err != nil {
+		t.Errorf("failed to increment `/stats` %v", err)
+	}
+	if v := obj["stats"].([]float64)[0]; v != 2.0 {
+		t.Errorf("expected `/stats/0` to be 2 found %v\n", v)
+	}
+	if v := obj["stats"].([]float64)[1]; v != 4.0 {
+		t.Errorf("expected `/stats/1` to be 4 found %v\n", v)
+	}
+
+	// getContainer() code coverage
+	doc = `{ "stats" : { "counters": [0, 0], "invalid": 0 }}`
+	json.Unmarshal([]byte(doc), &obj)
+	if err := Incr(obj, "/stats/counters/3/1", 2); err != ErrorInvalidPath {
+		t.Errorf("expected %v got %v", ErrorInvalidPath, err)
+	}
+}
+
+func TestDecr(t *testing.T) {
+	var obj map[string]interface{}
+	doc := `{ "stats" : [10, 1, true], "counter": 2.0 }`
+	json.Unmarshal([]byte(doc), &obj)
+
+	if err := Decr(obj, "/invalid/path", 1.0); err != ErrorInvalidPath {
+		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
+	}
+
+	if err := Decr(obj, "/stats/2", 2); err != ErrorInvalidType {
+		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+	}
+	if err := Decr(obj, "/stats/3", 2); err != ErrorInvalidPath {
+		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
+	}
+	if err := Decr(obj, "/counter", 2, 3); err != ErrorInvalidType {
+		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+	}
+
+	// for []interface{}
+	if err := Decr(obj, "/stats/1", 2); err != nil {
+		t.Errorf("failed to decrement `/stats/1` %v", err)
+	}
+	if err := Decr(obj, "/stats", 2, 1); err != nil {
+		t.Errorf("failed to decrement `/stats` %v", err)
+	}
+	if v := obj["stats"].([]interface{})[0]; v != 8.0 {
+		t.Errorf("expected `/stats/0` to be 8.0 found %v\n", v)
+	}
+	if v := obj["stats"].([]interface{})[1]; v != -2.0 {
+		t.Errorf("expected `/stats/1` to be -2.0 found %v\n", v)
+	}
+
+	// for []float64{}
+	obj = map[string]interface{}{
+		"stats":   []float64{10, 1},
+		"counter": float64(2),
+	}
+
+	if err := Decr(obj, "/stats/3", 2); err != ErrorInvalidPath {
+		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
+	}
+
+	if err := Decr(obj, "/stats/1", 2); err != nil {
+		t.Errorf("failed to decrement `/stats/1` %v", err)
+	}
+	if err := Decr(obj, "/stats", 2, 1); err != nil {
+		t.Errorf("failed to decrement `/stats` %v", err)
+	}
+	if v := obj["stats"].([]float64)[0]; v != 8.0 {
+		t.Errorf("expected `/stats/0` to be 8.0 found %v\n", v)
+	}
+	if v := obj["stats"].([]float64)[1]; v != -2.0 {
+		t.Errorf("expected `/stats/1` to be -2.0 found %v\n", v)
+	}
+
+	// for code coverage for parsing path with escape sequence.
+	doc = `{ "sta~ts" : { "count~er": 2, "invalid": true }}`
+	json.Unmarshal([]byte(doc), &obj)
+	if err := Decr(obj, "/sta~0ts/invalid", 2); err != ErrorInvalidType {
+		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
+	}
+	if err := Decr(obj, "/sta~0ts/count~0er", 10.0); err != nil {
+		t.Errorf("failed to increment `/sta~ts/count~er`")
+	}
+	if v := obj["sta~ts"].(map[string]interface{})["count~er"]; v != -8.0 {
+		t.Errorf("expected `/sta~ts/count~er` to be -8 found %v\n", v)
+	}
+}
+
+func BenchmarkGet357(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(three57JSON), &obj)
+	l := len(three57Ptrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := three57Ptrs[i%l]
+		Get(obj, path)
+	}
+}
+
+func BenchmarkGetPools(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(poolsJSON), &obj)
+	l := len(poolsPtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := poolsPtrs[i%l]
+		Get(obj, path)
+	}
+}
+
+func BenchmarkGetSample(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(serieslysampleJSON), &obj)
+	l := len(serieslysamplePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := serieslysamplePtrs[i%l]
+		Get(obj, path)
+	}
+}
+
+func BenchmarkGetCode(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(codeJSON), &obj)
+	l := len(codePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := codePtrs[i%l]
+		Get(obj, path)
+	}
+}
+
+func BenchmarkSet357(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(three57JSON), &obj)
+	l := len(three57Ptrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := three57Ptrs[i%l]
+		if path == "" {
+			continue
+		}
+		Set(obj, path, "bench")
+	}
+}
+
+func BenchmarkSetPools(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(poolsJSON), &obj)
+	l := len(poolsPtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := poolsPtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Set(obj, path, "bench")
+	}
+}
+
+func BenchmarkSetSample(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(serieslysampleJSON), &obj)
+	l := len(serieslysamplePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := serieslysamplePtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Set(obj, path, "bench")
+	}
+}
+
+func BenchmarkSetCode(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(codeJSON), &obj)
+	l := len(codePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := codePtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Set(obj, path, "bench")
+	}
+}
+
+func BenchmarkDelete357(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(three57JSON), &obj)
+	l := len(three57Ptrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := three57Ptrs[i%l]
+		if path == "" {
+			continue
+		}
+		Delete(obj, path)
+	}
+}
+
+func BenchmarkDeletePools(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(poolsJSON), &obj)
+	l := len(poolsPtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := poolsPtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Delete(obj, path)
+	}
+}
+
+func BenchmarkDeleteSample(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(serieslysampleJSON), &obj)
+	l := len(serieslysamplePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := serieslysamplePtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Delete(obj, path)
+	}
+}
+
+func BenchmarkDeleteCode(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(codeJSON), &obj)
+	l := len(codePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := codePtrs[i%l]
+		if path == "" {
+			continue
+		}
+		Delete(obj, path)
+	}
+}
+
+func BenchmarkDeleteAny357(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(three57JSON), &obj)
+	l := len(three57Ptrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := three57Ptrs[i%l]
+		if path == "" {
+			continue
+		}
+		DeleteAny(obj, path)
+	}
+}
+
+func BenchmarkDeleteAnyPools(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(poolsJSON), &obj)
+	l := len(poolsPtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := poolsPtrs[i%l]
+		if path == "" {
+			continue
+		}
+		DeleteAny(obj, path)
+	}
+}
+
+func BenchmarkDeleteAnySample(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(serieslysampleJSON), &obj)
+	l := len(serieslysamplePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := serieslysamplePtrs[i%l]
+		if path == "" {
+			continue
+		}
+		DeleteAny(obj, path)
+	}
+}
+
+func BenchmarkDeleteAnyCode(b *testing.B) {
+	var obj map[string]interface{}
+	json.Unmarshal([]byte(codeJSON), &obj)
+	l := len(codePtrs)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		path := codePtrs[i%l]
+		if path == "" {
+			continue
+		}
+		DeleteAny(obj, path)
+	}
+}
 func BenchmarkParseAndPath(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for _, test := range tests {
