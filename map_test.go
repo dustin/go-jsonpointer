@@ -66,7 +66,6 @@ func TestPaths(t *testing.T) {
 		if !reflect.DeepEqual(got, test.exp) {
 			t.Errorf("On %v, expected %+v (%T), got %+v (%T)",
 				test.path, test.exp, test.exp, got, got)
-			t.Fail()
 		} else {
 			t.Logf("Success - got %v for %v", got, test.path)
 		}
@@ -85,19 +84,16 @@ func TestSet(t *testing.T) {
 		if test.exp == nil {
 			if err == nil {
 				t.Errorf("expected error for %v", test.path)
-				t.Fail()
 			}
 			continue
 		} else if err != nil {
 			t.Errorf("On %v", test.path)
-			t.Fail()
 		}
 
 		got := Get(obj, test.path)
 		if got != newval {
 			t.Errorf("On %v, expected %v, got %+v (%T)",
 				test.path, newval, got, got)
-			t.Fail()
 		} else {
 			t.Logf("Success - got %v for %v", got, test.path)
 		}
@@ -114,17 +110,14 @@ func TestDelete(t *testing.T) {
 		if strings.HasPrefix(test.path, "/foo/") {
 			if err == nil {
 				t.Errorf("expected error on %v, can't be idempotent", test.path)
-				t.Fail()
 			}
 			continue
 		} else if !strings.Contains(test.path, "/invalid") && err != nil {
 			t.Errorf("On %v, %v", test.path, err)
-			t.Fail()
 		}
 		got := Get(obj, test.path)
 		if got != nil {
 			t.Errorf("On %v, expected `nil`, got %+v (%T)", test.path, got, got)
-			t.Fail()
 		} else {
 			t.Logf("Success - got %v for %v", got, test.path)
 		}
@@ -141,23 +134,19 @@ func TestDeleteAny(t *testing.T) {
 		if test.exp == nil {
 			if err == nil {
 				t.Errorf("expected error for %v", test.path)
-				t.Fail()
 			}
 			continue
 		} else if err != nil {
 			t.Errorf("On %v", test.path)
-			t.Fail()
 		}
 		got := Get(obj, test.path)
 		if test.exp == "bar" {
 			if got.(string) != "baz" {
 				t.Errorf("On %v, expected [baz], got %+v (%T)",
 					test.path, got, got)
-				t.Fail()
 			}
 		} else if got != nil {
 			t.Errorf("On %v, expected `nil`, got %+v (%T)", test.path, got, got)
-			t.Fail()
 		} else {
 			t.Logf("Success - got %v for %v", got, test.path)
 		}
@@ -172,12 +161,10 @@ func TestDeleteAny1Len(t *testing.T) {
 	err := DeleteAny(m, path)
 	if err != nil {
 		t.Errorf("On %v", path)
-		t.Fail()
 	}
 	got := Get(m, path)
 	if got != nil {
 		t.Errorf("On %v, expected `nil`, got %+v (%T)", path, got, got)
-		t.Fail()
 	} else {
 		t.Logf("Success - got %v for %v", got, path)
 	}
@@ -190,38 +177,30 @@ func TestIncr(t *testing.T) {
 
 	if err := Incr(obj, "/invalid/path", 2); err != ErrorInvalidPath {
 		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
-		t.Fail()
 	}
 
 	if err := Incr(obj, "/stats/2", 2); err != ErrorInvalidType {
 		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
-		t.Fail()
 	}
 	if err := Incr(obj, "/stats/3", 2); err != ErrorInvalidPath {
 		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
-		t.Fail()
 	}
 	if err := Incr(obj, "/counter", 2, 3); err != ErrorInvalidType {
 		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
-		t.Fail()
 	}
 
 	// for []interface{}
 	if err := Incr(obj, "/stats/1", 2); err != nil {
 		t.Errorf("failed to increment `/stats/1` %v", err)
-		t.Fail()
 	}
 	if err := Incr(obj, "/stats", 2, 1); err != nil {
 		t.Errorf("failed to increment `/stats` %v", err)
-		t.Fail()
 	}
 	if v := obj["stats"].([]interface{})[0]; v != 2.0 {
 		t.Errorf("expected `/stats/0` to be 2 found %v\n", v)
-		t.Fail()
 	}
 	if v := obj["stats"].([]interface{})[1]; v != 4.0 {
 		t.Errorf("expected `/stats/1` to be 4 found %v\n", v)
-		t.Fail()
 	}
 
 	// for []float64{}
@@ -231,19 +210,15 @@ func TestIncr(t *testing.T) {
 	}
 	if err := Incr(obj, "/stats/1", 2); err != nil {
 		t.Errorf("failed to increment `/stats/1` %v", err)
-		t.Fail()
 	}
 	if err := Incr(obj, "/stats", 2, 1); err != nil {
 		t.Errorf("failed to increment `/stats` %v", err)
-		t.Fail()
 	}
 	if v := obj["stats"].([]float64)[0]; v != 2.0 {
 		t.Errorf("expected `/stats/0` to be 2 found %v\n", v)
-		t.Fail()
 	}
 	if v := obj["stats"].([]float64)[1]; v != 4.0 {
 		t.Errorf("expected `/stats/1` to be 4 found %v\n", v)
-		t.Fail()
 	}
 
 	// getContainer() code coverage
@@ -251,7 +226,6 @@ func TestIncr(t *testing.T) {
 	json.Unmarshal([]byte(doc), &obj)
 	if err := Incr(obj, "/stats/counters/3/1", 2); err != ErrorInvalidPath {
 		t.Errorf("expected %v got %v", ErrorInvalidPath, err)
-		t.Fail()
 	}
 }
 
@@ -262,38 +236,30 @@ func TestDecr(t *testing.T) {
 
 	if err := Decr(obj, "/invalid/path", 1.0); err != ErrorInvalidPath {
 		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
-		t.Fail()
 	}
 
 	if err := Decr(obj, "/stats/2", 2); err != ErrorInvalidType {
 		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
-		t.Fail()
 	}
 	if err := Decr(obj, "/stats/3", 2); err != ErrorInvalidPath {
 		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
-		t.Fail()
 	}
 	if err := Decr(obj, "/counter", 2, 3); err != ErrorInvalidType {
 		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
-		t.Fail()
 	}
 
 	// for []interface{}
 	if err := Decr(obj, "/stats/1", 2); err != nil {
 		t.Errorf("failed to decrement `/stats/1` %v", err)
-		t.Fail()
 	}
 	if err := Decr(obj, "/stats", 2, 1); err != nil {
 		t.Errorf("failed to decrement `/stats` %v", err)
-		t.Fail()
 	}
 	if v := obj["stats"].([]interface{})[0]; v != 8.0 {
 		t.Errorf("expected `/stats/0` to be 8.0 found %v\n", v)
-		t.Fail()
 	}
 	if v := obj["stats"].([]interface{})[1]; v != -2.0 {
 		t.Errorf("expected `/stats/1` to be -2.0 found %v\n", v)
-		t.Fail()
 	}
 
 	// for []float64{}
@@ -304,24 +270,19 @@ func TestDecr(t *testing.T) {
 
 	if err := Decr(obj, "/stats/3", 2); err != ErrorInvalidPath {
 		t.Errorf("expected %v, got %v", ErrorInvalidPath, err)
-		t.Fail()
 	}
 
 	if err := Decr(obj, "/stats/1", 2); err != nil {
 		t.Errorf("failed to decrement `/stats/1` %v", err)
-		t.Fail()
 	}
 	if err := Decr(obj, "/stats", 2, 1); err != nil {
 		t.Errorf("failed to decrement `/stats` %v", err)
-		t.Fail()
 	}
 	if v := obj["stats"].([]float64)[0]; v != 8.0 {
 		t.Errorf("expected `/stats/0` to be 8.0 found %v\n", v)
-		t.Fail()
 	}
 	if v := obj["stats"].([]float64)[1]; v != -2.0 {
 		t.Errorf("expected `/stats/1` to be -2.0 found %v\n", v)
-		t.Fail()
 	}
 
 	// for code coverage for parsing path with escape sequence.
@@ -329,15 +290,12 @@ func TestDecr(t *testing.T) {
 	json.Unmarshal([]byte(doc), &obj)
 	if err := Decr(obj, "/sta~0ts/invalid", 2); err != ErrorInvalidType {
 		t.Errorf("expected %v, got %v", ErrorInvalidType, err)
-		t.Fail()
 	}
 	if err := Decr(obj, "/sta~0ts/count~0er", 10.0); err != nil {
 		t.Errorf("failed to increment `/sta~ts/count~er`")
-		t.Fail()
 	}
 	if v := obj["sta~ts"].(map[string]interface{})["count~er"]; v != -8.0 {
 		t.Errorf("expected `/sta~ts/count~er` to be -8 found %v\n", v)
-		t.Fail()
 	}
 }
 
