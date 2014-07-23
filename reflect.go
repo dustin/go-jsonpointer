@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Get the value at the specified path.
+// Reflect gets the value at the specified path from a struct.
 func Reflect(o interface{}, path string) interface{} {
 	if path == "" {
 		return o
@@ -63,6 +63,7 @@ OUTER:
 	return rv
 }
 
+// ReflectListPointers lists all possible pointers from the given struct.
 func ReflectListPointers(o interface{}) ([]string, error) {
 	return reflectListPointersRecursive(o, ""), nil
 }
