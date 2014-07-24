@@ -237,6 +237,10 @@ func TestReflect(t *testing.T) {
 			path: "/MapFloatKey/3.14",
 			exp:  "pi",
 		},
+		{
+			path: "/MapFloatKey/4.0",
+			exp:  nil,
+		},
 	}
 
 	for _, test := range tests {
