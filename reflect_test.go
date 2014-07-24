@@ -59,6 +59,34 @@ var input = &person{
 	},
 }
 
+func benchReflect(b *testing.B, path string) {
+	for i := 0; i < b.N; i++ {
+		if Reflect(input, path) == nil {
+			b.FailNow()
+		}
+	}
+}
+
+func BenchmarkReflectRoot(b *testing.B) {
+	benchReflect(b, "/")
+}
+
+func BenchmarkReflectToplevelExact(b *testing.B) {
+	benchReflect(b, "/Twitter")
+}
+
+func BenchmarkReflectToplevelTagged(b *testing.B) {
+	benchReflect(b, "/Name")
+}
+
+func BenchmarkReflectToplevelTaggedLower(b *testing.B) {
+	benchReflect(b, "/name")
+}
+
+func BenchmarkReflectDeep(b *testing.B) {
+	benchReflect(b, "/addresses/0/Zip")
+}
+
 func compareStringArrayIgnoringOrder(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
