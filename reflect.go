@@ -34,7 +34,7 @@ OUTER:
 				sf := typ.Field(i)
 				tag := sf.Tag.Get("json")
 				name := parseJSONTagName(tag)
-				if name == p {
+				if name != "" && name == p {
 					rv = val.Field(i).Interface()
 					continue OUTER
 				}

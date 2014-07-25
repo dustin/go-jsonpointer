@@ -68,7 +68,7 @@ func benchReflect(b *testing.B, path string) {
 }
 
 func BenchmarkReflectRoot(b *testing.B) {
-	benchReflect(b, "/")
+	benchReflect(b, "")
 }
 
 func BenchmarkReflectToplevelExact(b *testing.B) {
@@ -156,6 +156,9 @@ func TestReflect(t *testing.T) {
 		{
 			path: "",
 			exp:  input,
+		},
+		{
+			path: "/", exp: nil,
 		},
 		{
 			path: "/name",
@@ -246,7 +249,7 @@ func TestReflect(t *testing.T) {
 	for _, test := range tests {
 		output := Reflect(input, test.path)
 		if !reflect.DeepEqual(output, test.exp) {
-			t.Errorf("Expected %#v, got %#v", test.exp, output)
+			t.Errorf("Expected %#v for %q, got %#v", test.exp, test.path, output)
 		}
 	}
 }
