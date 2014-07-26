@@ -22,14 +22,22 @@ func arreq(a, b []string) bool {
 	return false
 }
 
-var decoder = strings.NewReplacer("~1", "/", "~0", "~")
+// unescape unescapes a tilde escaped string.
+//
+// It's dumb looking, but it benches faster than strings.NewReplacer
+func unescape(s string) string {
+	return strings.Replace(strings.Replace(s, "~0", "~", -1), "~1", "/", -1)
+}
 
 func parsePointer(s string) []string {
 	a := strings.Split(s[1:], "/")
+	if !strings.Contains(s, "~") {
+		return a
+	}
 
 	for i := range a {
 		if strings.Contains(a[i], "~") {
-			a[i] = decoder.Replace(a[i])
+			a[i] = unescape(a[i])
 		}
 	}
 	return a

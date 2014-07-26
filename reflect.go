@@ -12,7 +12,7 @@ func Reflect(o interface{}, path string) interface{} {
 		return o
 	}
 
-	parts := strings.Split(path[1:], "/")
+	parts := parsePointer(path)
 	var rv interface{} = o
 
 OUTER:
@@ -23,10 +23,6 @@ OUTER:
 		}
 
 		if val.Kind() == reflect.Struct {
-			if strings.Contains(p, "~") {
-				p = decoder.Replace(p)
-			}
-
 			// first look to see if path matches JSON tag name
 			typ := val.Type()
 			for i := 0; i < typ.NumField(); i++ {
@@ -47,9 +43,6 @@ OUTER:
 				return nil
 			}
 		} else if val.Kind() == reflect.Map {
-			if strings.Contains(p, "~") {
-				p = decoder.Replace(p)
-			}
 			// our pointer always gives us a string key
 			// here we try to convert it into the correct type
 			mapKey, canConvert := makeMapKeyFromString(val.Type().Key(), p)

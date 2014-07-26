@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/dustin/gojson"
@@ -498,5 +499,40 @@ func BenchmarkLargeMap(b *testing.B) {
 			b.Fatalf("Error parsing JSON: %v", err)
 		}
 		Get(m, keys[0])
+	}
+}
+
+const (
+	tildeTestKey = "/name~0contained"
+	slashTestKey = "/name~1contained"
+)
+
+func testDoubleReplacer(s string) string {
+	return unescape(s)
+}
+
+func BenchmarkReplacerSlash(b *testing.B) {
+	r := strings.NewReplacer("~1", "/", "~0", "~")
+	for i := 0; i < b.N; i++ {
+		r.Replace(slashTestKey)
+	}
+}
+
+func BenchmarkReplacerTilde(b *testing.B) {
+	r := strings.NewReplacer("~1", "/", "~0", "~")
+	for i := 0; i < b.N; i++ {
+		r.Replace(tildeTestKey)
+	}
+}
+
+func BenchmarkDblReplacerSlash(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testDoubleReplacer(slashTestKey)
+	}
+}
+
+func BenchmarkDblReplacerTilde(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testDoubleReplacer(tildeTestKey)
 	}
 }
