@@ -87,6 +87,14 @@ func BenchmarkReflectDeep(b *testing.B) {
 	benchReflect(b, "/addresses/0/Zip")
 }
 
+func BenchmarkReflectSlash(b *testing.B) {
+	benchReflect(b, "/name~1contained")
+}
+
+func BenchmarkReflectTilde(b *testing.B) {
+	benchReflect(b, "/name~0contained")
+}
+
 func compareStringArrayIgnoringOrder(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

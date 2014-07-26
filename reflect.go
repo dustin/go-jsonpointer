@@ -24,8 +24,7 @@ OUTER:
 
 		if val.Kind() == reflect.Struct {
 			if strings.Contains(p, "~") {
-				p = strings.Replace(p, "~1", "/", -1)
-				p = strings.Replace(p, "~0", "~", -1)
+				p = decoder.Replace(p)
 			}
 
 			// first look to see if path matches JSON tag name
@@ -49,8 +48,7 @@ OUTER:
 			}
 		} else if val.Kind() == reflect.Map {
 			if strings.Contains(p, "~") {
-				p = strings.Replace(p, "~1", "/", -1)
-				p = strings.Replace(p, "~0", "~", -1)
+				p = decoder.Replace(p)
 			}
 			// our pointer always gives us a string key
 			// here we try to convert it into the correct type
