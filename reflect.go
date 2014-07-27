@@ -23,25 +23,18 @@ OUTER:
 		}
 
 		if val.Kind() == reflect.Struct {
-			// first look to see if path matches JSON tag name
 			typ := val.Type()
 			for i := 0; i < typ.NumField(); i++ {
 				sf := typ.Field(i)
 				tag := sf.Tag.Get("json")
 				name := parseJSONTagName(tag)
-				if name != "" && name == p {
+				if (name != "" && name == p) || sf.Name == p {
 					rv = val.Field(i).Interface()
 					continue OUTER
 				}
 			}
-
-			// no JSON tag name matched, look for direct field match
-			field := val.FieldByName(p)
-			if field.IsValid() {
-				rv = field.Interface()
-			} else {
-				return nil
-			}
+			// Found no matching field.
+			return nil
 		} else if val.Kind() == reflect.Map {
 			// our pointer always gives us a string key
 			// here we try to convert it into the correct type
@@ -59,8 +52,7 @@ OUTER:
 		} else if val.Kind() == reflect.Slice || val.Kind() == reflect.Array {
 			i, err := strconv.Atoi(p)
 			if err == nil && i < val.Len() {
-				field := val.Index(i)
-				rv = field.Interface()
+				rv = val.Index(i).Interface()
 			} else {
 				return nil
 			}
