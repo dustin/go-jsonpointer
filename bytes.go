@@ -192,6 +192,8 @@ func ListPointers(data []byte) ([]string, error) {
 			current = sliceToEnd(current)
 		case json.ScanBeginObject:
 			current = append(current, "")
+		case json.ScanError:
+			return nil, fmt.Errorf("Error reading JSON object at offset %v", offset)
 		}
 
 		if newOp == json.ScanBeginArray || newOp == json.ScanArrayValue ||
