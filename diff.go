@@ -33,29 +33,32 @@ func must(err error) {
 	}
 }
 
+func pointerSet(j []byte) (map[string]bool, error) {
+	a, err := ListPointers(j)
+	if err != nil {
+		return nil, err
+	}
+	rv := map[string]bool{}
+	for _, v := range a {
+		rv[v] = true
+	}
+	return rv, nil
+}
+
 // Diff returns the differences between two json blobs.
 func Diff(a, b []byte) (map[string]DiffType, error) {
-	alist, err := ListPointers(a)
+	amap, err := pointerSet(a)
 	if err != nil {
 		return nil, err
 	}
-	blist, err := ListPointers(b)
+	bmap, err := pointerSet(b)
 	if err != nil {
 		return nil, err
-	}
-
-	amap := map[string]bool{}
-	bmap := map[string]bool{}
-	for _, v := range alist {
-		amap[v] = true
-	}
-	for _, v := range blist {
-		bmap[v] = true
 	}
 
 	rv := map[string]DiffType{}
 
-	for _, v := range alist {
+	for v := range amap {
 		if v == "" {
 			continue
 		}
@@ -71,7 +74,7 @@ func Diff(a, b []byte) (map[string]DiffType, error) {
 		}
 	}
 
-	for _, v := range blist {
+	for v := range bmap {
 		if !amap[v] {
 			rv[v] = MissingA
 		}
