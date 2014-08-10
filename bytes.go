@@ -163,6 +163,9 @@ func mustParseInt(s string) int {
 
 // ListPointers lists all possible pointers from the given input.
 func ListPointers(data []byte) ([]string, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("Invalid JSON")
+	}
 	rv := []string{""}
 
 	scan := &json.Scanner{}
@@ -173,7 +176,7 @@ func ListPointers(data []byte) ([]string, error) {
 	var current []string
 	for {
 		if offset >= len(data) {
-			break
+			return rv, nil
 		}
 		newOp := scan.Step(scan, int(data[offset]))
 		offset++
@@ -201,8 +204,6 @@ func ListPointers(data []byte) ([]string, error) {
 			rv = append(rv, encodePointer(current))
 		}
 	}
-
-	return rv, nil
 }
 
 // FindMany finds several jsonpointers in one pass through the input.

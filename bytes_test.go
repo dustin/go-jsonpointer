@@ -52,7 +52,15 @@ func TestFindDecode(t *testing.T) {
 }
 
 func TestListPointers(t *testing.T) {
-	got, err := ListPointers([]byte(objSrc))
+	got, err := ListPointers(nil)
+	if err == nil {
+		t.Errorf("Expected error on nil input, got %v", got)
+	}
+	got, err = ListPointers([]byte(`{"x": {"y"}}`))
+	if err == nil {
+		t.Errorf("Expected error on broken input, got %v", got)
+	}
+	got, err = ListPointers([]byte(objSrc))
 	if err != nil {
 		t.Fatalf("Error getting list of pointers: %v", err)
 	}
