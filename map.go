@@ -1,9 +1,18 @@
 package jsonpointer
 
 import (
+	"gopkg.in/mgo.v2/bson"
 	"strconv"
 	"strings"
 )
+
+func handleTilde(p string) string {
+	if strings.Contains(p, "~") {
+		p = strings.Replace(p, "~1", "/", -1)
+		p = strings.Replace(p, "~0", "~", -1)
+	}
+	return p
+}
 
 // Get the value at the specified path.
 func Get(m map[string]interface{}, path string) interface{} {
@@ -15,12 +24,13 @@ func Get(m map[string]interface{}, path string) interface{} {
 	var rv interface{} = m
 
 	for _, p := range parts {
+
 		switch v := rv.(type) {
 		case map[string]interface{}:
-			if strings.Contains(p, "~") {
-				p = strings.Replace(p, "~1", "/", -1)
-				p = strings.Replace(p, "~0", "~", -1)
-			}
+			handleTilde(p)
+			rv = v[p]
+		case bson.M:
+			handleTilde(p)
 			rv = v[p]
 		case []interface{}:
 			i, err := strconv.Atoi(p)
