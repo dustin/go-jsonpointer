@@ -60,7 +60,6 @@ func TestPaths(t *testing.T) {
 		if !reflect.DeepEqual(got, test.exp) {
 			t.Errorf("On %v, expected %+v (%T), got %+v (%T)",
 				test.path, test.exp, test.exp, got, got)
-			t.Fail()
 		} else {
 			t.Logf("Success - got %v for %v", got, test.path)
 		}

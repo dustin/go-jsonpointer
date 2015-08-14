@@ -193,11 +193,9 @@ func TestPointer(t *testing.T) {
 		}
 		if err != nil {
 			t.Errorf("Got an error on key %v: %v", test.path, err)
-			t.Fail()
 		} else if !reflect.DeepEqual(val, test.exp) {
 			t.Errorf("On %#v, expected %+v (%T), got %+v (%T)",
 				test.path, test.exp, test.exp, val, val)
-			t.Fail()
 		} else {
 			t.Logf("Success - got %s for %#v", got, test.path)
 		}
@@ -222,12 +220,10 @@ func TestPointerCoder(t *testing.T) {
 		if k != encoded {
 			t.Errorf("Expected to encode %#v as %#v, got %#v",
 				v, k, encoded)
-			t.Fail()
 		}
 		if !arreq(v, parsed) {
 			t.Errorf("Expected to decode %#v as %#v, got %#v",
 				k, v, parsed)
-			t.Fail()
 		}
 	}
 }
