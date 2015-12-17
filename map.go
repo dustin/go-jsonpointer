@@ -6,7 +6,7 @@ import (
 )
 
 // Get the value at the specified path.
-func Get(m map[string]interface{}, path string) interface{} {
+func Get(m interface{}, path string) interface{} {
 	if path == "" {
 		return m
 	}
