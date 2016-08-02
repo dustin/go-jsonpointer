@@ -1,11 +1,10 @@
 package jsonpointer
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"reflect"
 	"testing"
-
-	"github.com/dustin/gojson"
 )
 
 const objSrc = `{
@@ -94,7 +93,7 @@ func TestFindSpaceBeforeColon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to find /foo: %v", err)
 	}
-	x, ok := json.UnquoteBytes(val)
+	x, ok := unquoteBytes(val)
 	if !ok {
 		t.Fatalf("Failed to unquote json bytes from %q", val)
 	}

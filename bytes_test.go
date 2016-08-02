@@ -2,13 +2,12 @@ package jsonpointer
 
 import (
 	"compress/gzip"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/dustin/gojson"
 )
 
 var ptests = []struct {
