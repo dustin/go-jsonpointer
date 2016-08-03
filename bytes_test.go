@@ -393,6 +393,27 @@ func TestSerieslySampleList(t *testing.T) {
 	}
 }
 
+func Test357ListPointers(t *testing.T) {
+	data, err := ioutil.ReadFile("testdata/357.json")
+	if err != nil {
+		t.Fatalf("Error beer-sample brewery 357 data: %v", err)
+	}
+
+	exp := []string{"", "/name", "/city", "/state", "/code",
+		"/country", "/phone", "/website", "/type", "/updated",
+		"/description",
+		"/address", "/address/0", "/address2",
+		"/address2/0", "/address3", "/address3/0"}
+
+	got, err := ListPointers(data)
+	if err != nil {
+		t.Fatalf("error listing pointers: %v", err)
+	}
+	if !reflect.DeepEqual(exp, got) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, got)
+	}
+}
+
 var codeJSON []byte
 
 func init() {
