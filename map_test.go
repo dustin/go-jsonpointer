@@ -86,32 +86,6 @@ func BenchmarkParseAndPath(b *testing.B) {
 	}
 }
 
-var bug3Data = []byte(`{"foo" : "bar"}`)
-
-func TestFindSpaceBeforeColon(t *testing.T) {
-	val, err := Find(bug3Data, "/foo")
-	if err != nil {
-		t.Fatalf("Failed to find /foo: %v", err)
-	}
-	x, ok := unquoteBytes(val)
-	if !ok {
-		t.Fatalf("Failed to unquote json bytes from %q", val)
-	}
-	if string(x) != "bar" {
-		t.Fatalf("Expected %q, got %q", "bar", val)
-	}
-}
-
-func TestListSpaceBeforeColon(t *testing.T) {
-	ptrs, err := ListPointers(bug3Data)
-	if err != nil {
-		t.Fatalf("Error listing pointers: %v", err)
-	}
-	if len(ptrs) != 2 || ptrs[0] != "" || ptrs[1] != "/foo" {
-		t.Fatalf(`Expected ["", "/foo"], got %#v`, ptrs)
-	}
-}
-
 func TestIndexNotFoundSameAsPropertyNotFound(t *testing.T) {
 	data, err := ioutil.ReadFile("testdata/357.json")
 	if err != nil {

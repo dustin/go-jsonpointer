@@ -237,7 +237,7 @@ func TestCBugg406(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to find thing: %v", err)
 	}
-	exp := ` "2.0.0-1976-rel-enterprise"`
+	exp := `"2.0.0-1976-rel-enterprise"`
 	if string(found) != exp {
 		t.Fatalf("Expected %q, got %q", exp, found)
 	}
@@ -300,34 +300,6 @@ func TestFindBrokenJSON(t *testing.T) {
 	}
 }
 
-func TestGrokLiteral(t *testing.T) {
-	brokenStr := "---broken---"
-	tests := []struct {
-		in  []byte
-		exp string
-	}{
-		{[]byte(`"simple"`), "simple"},
-		{[]byte(`"has\nnewline"`), "has\nnewline"},
-		{[]byte(`"broken`), brokenStr},
-	}
-
-	for _, test := range tests {
-		var got string
-		func() {
-			defer func() {
-				if e := recover(); e != nil {
-					got = brokenStr
-				}
-			}()
-			got = grokLiteral(test.in)
-		}()
-		if test.exp != got {
-			t.Errorf("Expected %q for %s, got %q",
-				test.exp, test.in, got)
-		}
-	}
-}
-
 func TestSerieslySample(t *testing.T) {
 	data, err := ioutil.ReadFile("testdata/serieslysample.json")
 	if err != nil {
@@ -362,7 +334,7 @@ func TestSerieslySampleMany(t *testing.T) {
 	}
 
 	keys := []string{"/kind", "/data/children/0/data/id", "/data/children/0/data/name"}
-	exp := []string{` "Listing"`, ` "w568e"`, ` "t3_w568e"`}
+	exp := []string{`"Listing"`, `"w568e"`, `"t3_w568e"`}
 
 	found, err := FindMany(data, keys)
 	if err != nil {
@@ -400,9 +372,8 @@ func Test357ListPointers(t *testing.T) {
 
 	exp := []string{"", "/name", "/city", "/state", "/code",
 		"/country", "/phone", "/website", "/type", "/updated",
-		"/description",
-		"/address", "/address/0", "/address2",
-		"/address2/0", "/address3", "/address3/0"}
+		"/description", "/address", "/address2", "/address2/0",
+		"/address3"}
 
 	got, err := ListPointers(data)
 	if err != nil {
