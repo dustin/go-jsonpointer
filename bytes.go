@@ -67,11 +67,28 @@ func encodePointer(p []string) string {
 // result into a user-specified object.  Errors if a properly
 // formatted JSON document can't be found at the given path.
 func FindDecode(data []byte, path string, into interface{}) error {
-	d, err := Find(data, path)
-	if err != nil {
-		return err
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+
+	if path == "" {
+		return d.Decode(into)
 	}
-	err = json.Unmarshal(d, into)
+
+	needle := parsePointer(path)
+
+	var derr error
+	err := visit(data, func(current []string, d *json.Decoder) bool {
+		if arreq(current, needle) {
+			derr = d.Decode(into)
+			return false
+		}
+		return true
+	})
+
+	if derr != nil {
+		err = derr
+	}
+
 	return err
 }
 
@@ -82,34 +99,12 @@ const (
 
 // Find a section of raw JSON by specifying a JSONPointer.
 func Find(data []byte, path string) ([]byte, error) {
-	if path == "" {
-		return data, nil
+	var m json.RawMessage
+	err := FindDecode(data, path, &m)
+	if err == io.EOF {
+		return nil, nil
 	}
-
-	needle := parsePointer(path)
-
-	d := json.NewDecoder(bytes.NewReader(data))
-	d.UseNumber()
-
-	var rv []byte
-	var derr error
-	err := visit(data, func(current []string, d *json.Decoder) bool {
-		if arreq(current, needle) {
-			var m json.RawMessage
-			derr = d.Decode(&m)
-			if derr == nil {
-				rv = []byte(m)
-			}
-			return false
-		}
-		return true
-	})
-
-	if derr != nil {
-		err = derr
-	}
-
-	return rv, err
+	return []byte(m), err
 }
 
 func sliceToEnd(s []string) []string {
@@ -141,9 +136,6 @@ func visit(data []byte, f func(current []string, d *json.Decoder) bool) error {
 	wantKey := false
 	for {
 		t, err := d.Token()
-		if err == io.EOF {
-			return nil
-		}
 		if err != nil {
 			return err
 		}
@@ -210,8 +202,6 @@ func visit(data []byte, f func(current []string, d *json.Decoder) bool) error {
 		}
 
 	}
-
-	return nil
 }
 
 func ListPointers(data []byte) ([]string, error) {
@@ -220,6 +210,9 @@ func ListPointers(data []byte) ([]string, error) {
 		rv = append(rv, encodePointer(current))
 		return true
 	})
+	if err == io.EOF {
+		err = nil
+	}
 	return rv, err
 }
 
