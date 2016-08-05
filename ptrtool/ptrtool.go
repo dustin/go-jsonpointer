@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -21,6 +23,16 @@ func main() {
 		}
 		for _, p := range l {
 			fmt.Println(p)
+		}
+	} else {
+		m, err := jsonpointer.FindMany(d, os.Args[1:])
+		if err != nil {
+			log.Fatalf("Error finding pointers: %v", err)
+		}
+		for k, v := range m {
+			b := &bytes.Buffer{}
+			json.Indent(b, v, "", "  ")
+			fmt.Printf("%v\n%s\n\n", k, b)
 		}
 	}
 }
