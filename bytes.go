@@ -98,7 +98,7 @@ func Find(data []byte, path string) ([]byte, error) {
 
 	offset := 0
 	beganLiteral := 0
-	current := []string{}
+	current := make([]string, 0, 32)
 	for {
 		if offset >= len(data) {
 			break
