@@ -414,6 +414,20 @@ func Test357ListPointers(t *testing.T) {
 	}
 }
 
+func TestEscape(t *testing.T) {
+	tests := []string{
+		"/", "~1", "~0", "/~1", "/~1/",
+	}
+
+	for _, test := range tests {
+		esc := string(escape(test, nil))
+		got := unescape(esc)
+		if got != test {
+			t.Errorf("unescape(escape(%q) [%q]) = %q", test, esc, got)
+		}
+	}
+}
+
 var codeJSON []byte
 
 func init() {

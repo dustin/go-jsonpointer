@@ -26,7 +26,7 @@ func arreq(a, b []string) bool {
 //
 // It's dumb looking, but it benches faster than strings.NewReplacer
 func unescape(s string) string {
-	return strings.Replace(strings.Replace(s, "~0", "~", -1), "~1", "/", -1)
+	return strings.Replace(strings.Replace(s, "~1", "/", -1), "~0", "~", -1)
 }
 
 func parsePointer(s string) []string {
@@ -43,21 +43,26 @@ func parsePointer(s string) []string {
 	return a
 }
 
+func escape(s string, out []rune) []rune {
+	for _, c := range s {
+		switch c {
+		case '/':
+			out = append(out, '~', '1')
+		case '~':
+			out = append(out, '~', '0')
+		default:
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
 func encodePointer(p []string) string {
 	out := make([]rune, 0, 64)
 
 	for _, s := range p {
 		out = append(out, '/')
-		for _, c := range s {
-			switch c {
-			case '/':
-				out = append(out, '~', '1')
-			case '~':
-				out = append(out, '~', '0')
-			default:
-				out = append(out, c)
-			}
-		}
+		out = escape(s, out)
 	}
 	return string(out)
 }
