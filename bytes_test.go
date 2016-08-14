@@ -3,10 +3,12 @@ package jsonpointer
 import (
 	"compress/gzip"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
+	"testing/quick"
 
 	"github.com/dustin/gojson"
 )
@@ -525,6 +527,40 @@ func BenchmarkLargeBest(b *testing.B) {
 	}
 }
 
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01233456789/~."
+
+type chars string
+
+func (c chars) Generate(rand *rand.Rand, _ int) reflect.Value {
+	size := rand.Intn(128)
+	var o []byte
+	for i := 0; i < size; i++ {
+		o = append(o, alphabet[rand.Intn(len(alphabet))])
+	}
+	s := chars(escape(string(o), nil))
+	return reflect.ValueOf(s)
+}
+
+// unescape unescapes a tilde escaped string.
+//
+// It's dumb looking, but it benches faster than strings.NewReplacer
+func oldunescape(s string) string {
+	return strings.Replace(strings.Replace(s, "~1", "/", -1), "~0", "~", -1)
+}
+
+func TestNewEscaper(t *testing.T) {
+	of := func(in chars) string {
+		t.Logf("Looking at %q", in)
+		return oldunescape(string(in))
+	}
+	nf := func(in chars) string {
+		return unescape(string(in))
+	}
+	if err := quick.CheckEqual(of, nf, nil); err != nil {
+		t.Errorf("quickcheck failure: %v", err)
+	}
+}
+
 func BenchmarkLargeMap(b *testing.B) {
 	keys := []string{
 		"/tree/kids/0/kids/0/kids/0/kids/0/kids/0/name",
@@ -544,6 +580,7 @@ func BenchmarkLargeMap(b *testing.B) {
 const (
 	tildeTestKey = "/name~0contained"
 	slashTestKey = "/name~1contained"
+	twoTestKey   = "/name~1cont~0ned"
 )
 
 func testDoubleReplacer(s string) string {
@@ -573,5 +610,11 @@ func BenchmarkDblReplacerSlash(b *testing.B) {
 func BenchmarkDblReplacerTilde(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testDoubleReplacer(tildeTestKey)
+	}
+}
+
+func BenchmarkDblReplacerTwo(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testDoubleReplacer(twoTestKey)
 	}
 }
