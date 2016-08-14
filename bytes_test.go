@@ -428,6 +428,34 @@ func TestEscape(t *testing.T) {
 			t.Errorf("unescape(escape(%q) [%q]) = %q", test, esc, got)
 		}
 	}
+
+	tf := func(s chars) bool {
+		uns := unescape(string(s))
+		got := string(escape(uns, nil))
+		return got == string(s)
+	}
+	quick.Check(tf, nil)
+}
+
+func TestUnescape(t *testing.T) {
+	tests := []struct {
+		in, exp string
+	}{
+		{"", ""},
+		{"/", "/"},
+		{"/thing", "/thing"},
+		{"~0", "~"},
+		{"~1", "/"},
+		{"~2", "~2"},
+		{"~", "~"},
+		{"thing~", "thing~"},
+	}
+	for _, test := range tests {
+		got := string(unescape(test.in))
+		if got != test.exp {
+			t.Errorf("on %q, got %q, wanted %q", test.in, got, test.exp)
+		}
+	}
 }
 
 var codeJSON []byte
@@ -550,7 +578,6 @@ func oldunescape(s string) string {
 
 func TestNewEscaper(t *testing.T) {
 	of := func(in chars) string {
-		t.Logf("Looking at %q", in)
 		return oldunescape(string(in))
 	}
 	nf := func(in chars) string {

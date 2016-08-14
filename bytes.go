@@ -23,24 +23,34 @@ func arreq(a, b []string) bool {
 }
 
 func unescape(s string) string {
-
 	n := strings.Count(s, "~")
 	if n == 0 {
 		return s
 	}
 
-	t := make([]byte, len(s)-n) // remove one char per ~
+	t := make([]byte, len(s)-n+1) // remove one char per ~
 	w := 0
 	start := 0
 	for i := 0; i < n; i++ {
 		j := start + strings.Index(s[start:], "~")
 		w += copy(t[w:], s[start:j])
-		switch s[j+1] {
+		if len(s) < j+2 {
+			t[w] = '~'
+			w++
+			break
+		}
+		c := s[j+1]
+		switch c {
 		case '0':
 			t[w] = '~'
 			w++
 		case '1':
 			t[w] = '/'
+			w++
+		default:
+			t[w] = '~'
+			w++
+			t[w] = c
 			w++
 		}
 		start = j + 2
